@@ -3,6 +3,8 @@ extern crate tempfile;
 use std::error::Error;
 use std::fs::File;
 use std::io::Read;
+
+#[cfg(test)]
 use std::io::Write;
 
 // Reads the whole file under path to the string
@@ -15,6 +17,7 @@ pub fn read(file_name: &str) -> Result<String, Box<Error>> {
 }
 
 // Creates temp file with the given content
+#[cfg(test)]
 pub fn create_temp_with_content(content: &str) -> Result<tempfile::NamedTempFile, Box<Error>> {
     let mut tmp_file = tempfile::NamedTempFile::new()?;
     tmp_file.write_all(content.as_bytes())?;
