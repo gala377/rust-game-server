@@ -1,0 +1,6 @@
+/target/
+
+# leave for libraries, but it's an executable
+# Cargo.lock
+
+**/*.rs.bk
