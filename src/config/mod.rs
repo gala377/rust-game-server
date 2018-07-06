@@ -21,9 +21,7 @@ pub struct ServerConfig {
 impl Config {
     pub fn from_file(file_name: &str) -> ConfigResult<Config> {
         let content = file::read(file_name)?;
-
         let config: Config = toml::from_str(content.as_str())?;
-        println!("{:#?}", config);
 
         Ok(config)
     }
