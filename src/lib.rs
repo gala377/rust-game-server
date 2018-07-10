@@ -6,5 +6,9 @@ extern crate serde;
 // GameServer configuration
 pub mod config;
 
+
+// Game object
+pub mod game;
+
 // private module with helper functions
 mod helpers;
