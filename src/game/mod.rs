@@ -59,6 +59,7 @@ impl Game {
        Err(GameError::NonExistingUnit) 
     }
 
+
     fn default_unit_stats() -> UnitStats {
         UnitStats {
             movement_range: 10,
@@ -66,8 +67,62 @@ impl Game {
             attack_range: 10,     
         }
     }
-}
 
+    // todo - all methods below need to be tested actually
+    pub fn move_unit(&mut self, unit_id: usize, (to_x, to_y): (usize, usize)) -> Result<(), GameError> {
+        let unit = self.unit_by_id(unit_id)?;
+        unit.state = UnitState::Moving(to_x, to_y);
+        Ok(())
+    }
+
+    pub fn battle_units(&mut self, u1_id: usize, u2_id: usize) -> Result<(), GameError> {
+        let mut units = self.units_by_id(vec![u1_id, u2_id])?;
+        
+        assert!(units.len() == 2);
+        let u1_pos = units[0].position;
+        let u2_pos = units[1].position;
+
+        let (x, y) = (
+            (u1_pos.0 + u2_pos.0)/2,
+            (u1_pos.1 + u2_pos.1)/2);
+
+        units[0].state = UnitState::Attack(x, y);
+        units[1].state = UnitState::Attack(x, y);
+
+        Ok(())
+    }
+
+    fn attack_position(&mut self, unit_id: usize, (x, y): (usize, usize)) -> 
+        Result<(), GameError> {
+        
+        let unit = self.unit_by_id(unit_id)?;
+        unit.state = UnitState::Attack(x, y);
+        Ok(())
+    }
+
+    fn unit_by_id(&mut self, id: usize) -> Result<&mut Unit, GameError> {
+        for u in &mut self.units {
+            if u.id == id {
+                return Ok(u)
+            }
+        }
+        Err(GameError::NonExistingUnit)
+    }
+
+    fn units_by_id(&mut self, ids: Vec<usize>) -> Result<Vec<&mut Unit>, GameError> {
+        let mut units = Vec::new();
+        for u in &mut self.units {
+            if ids.contains(&u.id) {
+                units.push(u);
+            }
+        }
+        if units.len() == 0 {
+            return Err(GameError::NonExistingUnit)
+        } 
+        Ok(units)
+    }
+
+}
 
 #[cfg(test)]
 mod tests {
