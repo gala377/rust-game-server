@@ -40,4 +40,6 @@ mod tests {
         let file_content = read(file.path().to_str().unwrap()).unwrap();
         assert_eq!(content, file_content);
     }
+
+    
 }
