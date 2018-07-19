@@ -59,7 +59,6 @@ impl Game {
        Err(GameError::NonExistingUnit) 
     }
 
-
     fn default_unit_stats() -> UnitStats {
         UnitStats {
             movement_range: 10,
@@ -68,13 +67,30 @@ impl Game {
         }
     }
 
+    fn assert_position_in_board(&self, x: usize, y: usize) -> Result<(), GameError> {
+        if x >= self.board_size.0 || y >= self.board_size.1 {
+            return Err(GameError::PositionOutsideTheBoard(x, y))
+        }
+        Ok(())
+    }
+
+    fn assert_unit_move_within_reach(u: &Unit, (x, y): (usize, usize)) -> Result<(), GameError> {
+        let pos = &u.position;
+        let x_diff = (pos.0 as i32 - x as i32).abs() as usize;
+        let y_diff = (pos.1 as i32 - y as i32).abs() as usize;
+        if x_diff + y_diff > u.stats.movement_range {
+            return Err(GameError::MoveOutsideUnitsReach(x, y))
+        }
+        Ok(())
+    }
+
     // todo - all methods below need to be tested actually
 
-    // todo - moving units outside the board should be considered an error
-    // todo - check Unit stats if the move is allowed
-    pub fn move_unit(&mut self, unit_id: usize, (to_x, to_y): (usize, usize)) -> Result<(), GameError> {
+    pub fn move_unit(&mut self, unit_id: usize, (x, y): (usize, usize)) -> Result<(), GameError> {
+        self.assert_position_in_board(x, y)?;
         let unit = self.unit_by_id(unit_id)?;
-        unit.state = UnitState::Moving(to_x, to_y);
+        Game::assert_unit_move_within_reach(&unit, (x, y))?;
+        unit.state = UnitState::Moving(x, y);
         Ok(())
     }
 
@@ -94,13 +110,13 @@ impl Game {
 
         Ok(())
     }
-
-    // todo - attacking posiion outside the board should be an error
-    // todo - check Unit stats if the move is allowed    
+   
     fn attack_position(&mut self, unit_id: usize, (x, y): (usize, usize)) -> 
         Result<(), GameError> {
         
+        self.assert_position_in_board(x, y)?;
         let unit = self.unit_by_id(unit_id)?;
+        Game::assert_unit_move_within_reach(&unit, (x, y))?;
         unit.state = UnitState::Attack(x, y);
         Ok(())
     }
@@ -264,6 +280,7 @@ mod tests {
             Err(err) => {
                 match err {
                     GameError::NonExistingUnit => true,
+                    _ => false,
                 }
             }
             _ => false,
@@ -276,8 +293,8 @@ mod tests {
         g.add_unit(0, (2, 2), UnitType::Cavalry);
         assert!(match g.move_unit(0, (4, 4)) {
             Ok(_) => {
-                let u = g.get_unit(2, 2);
-                if let UnitState::Moving(4, 4) = u {
+                let u = g.get_unit(2, 2).unwrap();
+                if let UnitState::Moving(4, 4) = u.state {
                     true
                 } else {
                     false
@@ -303,8 +320,8 @@ mod tests {
         g.add_unit(0, (2, 2), UnitType::Cavalry);
         assert!(match g.attack_position(0, (4, 4)) {
             Ok(_) => {
-                let u = g.get_unit(2, 2);
-                if let UnitState::Attack(4, 4) = u {
+                let u = g.get_unit(2, 2).unwrap();
+                if let UnitState::Attack(4, 4) = u.state {
                     true
                 } else {
                     false
@@ -323,5 +340,7 @@ mod tests {
             Err(_) => true,
         });
     }
+
+    // todo move and attack outside units range
 
 }
