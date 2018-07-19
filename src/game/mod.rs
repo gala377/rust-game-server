@@ -69,6 +69,9 @@ impl Game {
     }
 
     // todo - all methods below need to be tested actually
+
+    // todo - moving units outside the board should be considered an error
+    // todo - check Unit stats if the move is allowed
     pub fn move_unit(&mut self, unit_id: usize, (to_x, to_y): (usize, usize)) -> Result<(), GameError> {
         let unit = self.unit_by_id(unit_id)?;
         unit.state = UnitState::Moving(to_x, to_y);
@@ -92,6 +95,8 @@ impl Game {
         Ok(())
     }
 
+    // todo - attacking posiion outside the board should be an error
+    // todo - check Unit stats if the move is allowed    
     fn attack_position(&mut self, unit_id: usize, (x, y): (usize, usize)) -> 
         Result<(), GameError> {
         
@@ -263,6 +268,60 @@ mod tests {
             }
             _ => false,
         })
+    }
+
+    #[test]
+    fn move_unit_inside_boundaries() {
+        let mut g = Game::new(2, (10, 10));
+        g.add_unit(0, (2, 2), UnitType::Cavalry);
+        assert!(match g.move_unit(0, (4, 4)) {
+            Ok(_) => {
+                let u = g.get_unit(2, 2);
+                if let UnitState::Moving(4, 4) = u {
+                    true
+                } else {
+                    false
+                }
+            }
+            Err(_) => false,
+        });
+    }
+
+    #[test]
+    fn move_unit_outside_boundaries() {
+        let mut g = Game::new(3, (10, 10));
+        g.add_unit(0, (2, 2), UnitType::Cavalry);
+        assert!(match g.move_unit(0, (12, 2)) {
+            Ok(_) => false,
+            Err(_) => true,
+        });
+    }
+
+    #[test]
+    fn attack_position_inside_boundaries() {
+        let mut g = Game::new(2, (10, 10));
+        g.add_unit(0, (2, 2), UnitType::Cavalry);
+        assert!(match g.attack_position(0, (4, 4)) {
+            Ok(_) => {
+                let u = g.get_unit(2, 2);
+                if let UnitState::Attack(4, 4) = u {
+                    true
+                } else {
+                    false
+                }
+            }
+            Err(_) => false,
+        });
+    }
+
+    #[test]
+    fn attack_position_outside_boundaries() {
+        let mut g = Game::new(2, (10, 10));
+        g.add_unit(0, (2, 2), UnitType::Cavalry);
+        assert!(match g.attack_position(0, (11, 10)) {
+            Ok(_) => false,
+            Err(_) => true,
+        });
     }
 
 }
