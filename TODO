@@ -1,0 +1,12 @@
+// Game get_unit_by id
+
+// server communication protocol
+// Game to the end
+
+// Game security
+// Game generates random player identifier
+// Server maps identifiers to player name
+// Player knows about it's own identifier and names of the others
+// If he wants to communicate he needs to send his <name:identifier> base64 encoded
+// This way he knows which unit's are whose player (by their owners name) but
+// cannot send request in their name

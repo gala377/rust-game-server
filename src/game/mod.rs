@@ -1,6 +1,8 @@
 pub mod error;
 pub mod unit;
 
+use std::collections::HashSet;
+
 use self::error::GameError;
 use self::unit::{
     Unit,
@@ -50,13 +52,13 @@ impl Game {
         self.num_of_units += 1;
     }
 
-    pub fn get_unit(&self, x: usize, y: usize) -> Result<&Unit, GameError> {
-       for u in &self.units {
-           if u.position == (x, y) {
-               return Ok(&u)
-           }
-       }    
-       Err(GameError::NonExistingUnit) 
+    pub fn get_unit(&self, unit_id: usize) -> Result<&Unit, GameError> {
+        for u in &self.units {
+            if u.id == unit_id {
+                return Ok(u)
+            }
+        }
+        Err(GameError::NonExistingUnit(unit_id))
     }
 
     fn default_unit_stats() -> UnitStats {
@@ -84,8 +86,6 @@ impl Game {
         Ok(())
     }
 
-    // todo - all methods below need to be tested actually
-
     pub fn move_unit(&mut self, unit_id: usize, (x, y): (usize, usize)) -> Result<(), GameError> {
         self.assert_position_in_board(x, y)?;
         let unit = self.unit_by_id(unit_id)?;
@@ -94,6 +94,7 @@ impl Game {
         Ok(())
     }
 
+    // todo tests needed
     pub fn battle_units(&mut self, u1_id: usize, u2_id: usize) -> Result<(), GameError> {
         let mut units = self.units_by_id(vec![u1_id, u2_id])?;
         
@@ -111,7 +112,7 @@ impl Game {
         Ok(())
     }
    
-    fn attack_position(&mut self, unit_id: usize, (x, y): (usize, usize)) -> 
+    pub fn attack_position(&mut self, unit_id: usize, (x, y): (usize, usize)) -> 
         Result<(), GameError> {
         
         self.assert_position_in_board(x, y)?;
@@ -127,22 +128,65 @@ impl Game {
                 return Ok(u)
             }
         }
-        Err(GameError::NonExistingUnit)
+        Err(GameError::NonExistingUnit(id))
     }
 
+    // todo tests needed
     fn units_by_id(&mut self, ids: Vec<usize>) -> Result<Vec<&mut Unit>, GameError> {
         let mut units = Vec::new();
+        let mut found_units = HashSet::new();
+        let requested_units: HashSet<usize> = ids.iter().cloned().collect();
         for u in &mut self.units {
             if ids.contains(&u.id) {
+                found_units.insert(u.id);
                 units.push(u);
             }
         }
-        if units.len() == 0 {
-            return Err(GameError::NonExistingUnit)
+        if requested_units != found_units {
+            let mut diff = requested_units.difference(&found_units);
+            return match diff.next() {
+                Some(&val) => Err(GameError::NonExistingUnit(val)),
+                None => panic!("This sets difference should never be empty!"),
+            }
         } 
         Ok(units)
     }
 
+    // todo test
+    pub fn resolve_moves(&mut self) {
+        {   
+            let mut unresolved = self.units_to_be_moved();
+            while unresolved.len() > 0 {
+                // todo body
+            }
+        }
+        self.resolve_blockades();
+    }
+
+    // todo test
+    fn units_to_be_moved(&mut self) -> Vec<&mut Unit> {
+        let mut res = Vec::new();
+        for u in &mut self.units {
+            match u.state {
+                UnitState::Moving(..) | UnitState::Attack(..) => {
+                    res.push(u);
+                }
+                _ => (), 
+            }
+        }
+        res
+    }
+
+    // todo test
+    fn resolve_blockades(&mut self) {
+        // todo body
+    }
+
+    // todo test
+    pub fn game_over(&self) -> Option<usize> {
+        // todp body
+        None
+    }
 }
 
 #[cfg(test)]
@@ -257,7 +301,7 @@ mod tests {
     fn get_unit_by_position() {
         let mut g = Game::new(2, (5, 5));
         g.add_unit(0, (1, 1), UnitType::Cavalry);
-        let u: &Unit = g.get_unit(1, 1).unwrap();
+        let u: &Unit = g.get_unit(0).unwrap();
 
         assert_eq!(u.id, 0);
         assert_eq!(u.owner_id, 0);
@@ -273,13 +317,47 @@ mod tests {
     }
 
     #[test]
-    fn get_nonexisting_unit() {
+    fn get_notexisting_unit() {
         let g = Game::new(2, (5,5));
-        let res = g.get_unit(4, 4);
+        let res = g.get_unit(0);
         assert!(match res {
             Err(err) => {
                 match err {
-                    GameError::NonExistingUnit => true,
+                    GameError::NonExistingUnit(id) if id == 0 => true,
+                    _ => false,
+                }
+            }
+            _ => false,
+        })
+    }
+
+    #[test]
+    fn get_unit_by_id() {
+        let mut g = Game::new(2, (5, 5));
+        g.add_unit(0, (1, 1), UnitType::Cavalry);
+        let u: &Unit = g.unit_by_id(0).unwrap();
+
+        assert_eq!(u.id, 0);
+        assert_eq!(u.owner_id, 0);
+        assert_eq!(u.position, (1, 1));
+        assert!(match u.state {
+             UnitState::Idle => true,
+             _ => false,
+        });
+        assert!(match u.category {
+             UnitType::Cavalry => true,
+             _ => false,
+        });
+    }
+
+    #[test]
+    fn get_notexisting_unit_by_id() {
+        let g = Game::new(2, (5,5));
+        let res = g.get_unit(0);
+        assert!(match res {
+            Err(err) => {
+                match err {
+                    GameError::NonExistingUnit(id) if id == 0 => true,
                     _ => false,
                 }
             }
@@ -293,7 +371,7 @@ mod tests {
         g.add_unit(0, (2, 2), UnitType::Cavalry);
         assert!(match g.move_unit(0, (4, 4)) {
             Ok(_) => {
-                let u = g.get_unit(2, 2).unwrap();
+                let u = g.get_unit(0).unwrap();
                 if let UnitState::Moving(4, 4) = u.state {
                     true
                 } else {
@@ -320,7 +398,7 @@ mod tests {
         g.add_unit(0, (2, 2), UnitType::Cavalry);
         assert!(match g.attack_position(0, (4, 4)) {
             Ok(_) => {
-                let u = g.get_unit(2, 2).unwrap();
+                let u = g.get_unit(0).unwrap();
                 if let UnitState::Attack(4, 4) = u.state {
                     true
                 } else {
@@ -341,6 +419,24 @@ mod tests {
         });
     }
 
-    // todo move and attack outside units range
+    #[test]
+    fn move_unit_outside_unit_range() {
+        let mut g = Game::new(2, (20,20));
+        g.add_unit(0, (0, 0), UnitType::Pickerman);
+        assert!(match g.move_unit(0, (19, 19)) {
+            Ok(_) => false,
+            Err(_) => true,
+        });
+    }
+
+    #[test]
+    fn attack_position_outside_unit_range() {
+        let mut g = Game::new(2, (20,20));
+        g.add_unit(0, (0, 0), UnitType::Knight);
+        assert!(match g.attack_position(0, (19, 19)) {
+            Ok(_) => false,
+            Err(_) => true,
+        })
+    }
 
 }

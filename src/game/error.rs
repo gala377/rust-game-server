@@ -5,7 +5,7 @@ use std::fmt;
 
 #[derive(Debug)]
 pub enum GameError {
-    NonExistingUnit,
+    NonExistingUnit(usize),
     PositionOutsideTheBoard(usize, usize),
     MoveOutsideUnitsReach(usize, usize),
 }
@@ -13,7 +13,7 @@ pub enum GameError {
 impl Error for GameError {
     fn description(&self) -> &str {
         match self {
-            GameError::NonExistingUnit => "Unit doesn't extist!",
+            GameError::NonExistingUnit(_) => "Unit doesn't extist!",
             GameError::PositionOutsideTheBoard(_, _) => "Position is outside the board boundaries",
             GameError::MoveOutsideUnitsReach(_, _) => "Positions not within units reach"
         }
