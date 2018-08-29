@@ -10,15 +10,7 @@ pub enum GameError {
     MoveOutsideUnitsReach(usize, usize),
 }
 
-impl Error for GameError {
-    fn description(&self) -> &str {
-        match self {
-            GameError::NonExistingUnit(_) => "Unit doesn't extist!",
-            GameError::PositionOutsideTheBoard(_, _) => "Position is outside the board boundaries",
-            GameError::MoveOutsideUnitsReach(_, _) => "Positions not within units reach"
-        }
-    }
-}
+impl Error for GameError {}
 
 impl fmt::Display for GameError {
     // todo does this even work? 

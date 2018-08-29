@@ -11,6 +11,7 @@ use self::unit::{
     UnitStats,
 };
 
+// todo document
 pub struct Game {
     num_of_players: u8,
     num_of_units: usize,
@@ -18,6 +19,7 @@ pub struct Game {
     units: Vec<Unit>,
 }
 
+// todo document
 impl Game {
     
     pub fn new(num_of_players: u8, board_size: (usize, usize)) -> Game {
@@ -31,25 +33,25 @@ impl Game {
         }
     }
 
-    // future versions
-    // maybe return result so the player will know 
-    // which units where set outside the board
     pub fn add_unit(&mut self,
                 owner_id: u8,
                 position: (usize, usize),
-                category: UnitType) {
+                category: UnitType) -> Result<usize, GameError> {
         assert!(owner_id < self.num_of_players);
-        assert!(position < self.board_size);
-        self.units.push(
-            Unit{
+        if position < self.board_size {
+            let (x, y) = position;
+            return Err(GameError::PositionOutsideTheBoard(x, y))
+        }
+        self.units.push(Unit{
                 id: self.num_of_units,
                 owner_id,
                 position,
                 category,
                 stats: Game::default_unit_stats(),
                 state: UnitState::Idle,
-            });
+        });
         self.num_of_units += 1;
+        Ok(self.num_of_units-1)    
     }
 
     pub fn get_unit(&self, unit_id: usize) -> Result<&Unit, GameError> {
@@ -94,7 +96,7 @@ impl Game {
         Ok(())
     }
 
-    // todo tests needed
+    // todo tests
     pub fn battle_units(&mut self, u1_id: usize, u2_id: usize) -> Result<(), GameError> {
         let mut units = self.units_by_id(vec![u1_id, u2_id])?;
         
@@ -131,7 +133,7 @@ impl Game {
         Err(GameError::NonExistingUnit(id))
     }
 
-    // todo tests needed
+    // todo tests
     fn units_by_id(&mut self, ids: Vec<usize>) -> Result<Vec<&mut Unit>, GameError> {
         let mut units = Vec::new();
         let mut found_units = HashSet::new();
@@ -184,7 +186,7 @@ impl Game {
 
     // todo test
     pub fn game_over(&self) -> Option<usize> {
-        // todp body
+        // todo body
         None
     }
 }
@@ -193,6 +195,17 @@ impl Game {
 mod tests {
 
     use super::*;
+
+    macro_rules! assert_match {
+        ($id:ident, $( $p:pat )+) => {
+            assert!(match $id {
+                $(
+                    $p => true,
+                ),*
+                _ => false,
+            });
+        };
+    }
 
     #[test]
     #[should_panic]
@@ -231,20 +244,20 @@ mod tests {
     #[should_panic]
     fn add_new_unit_for_non_existing_player() {
         let mut g = Game::new(2, (10, 10));
-        g.add_unit(3, (1, 1), UnitType::Pickerman);
+        g.add_unit(3, (1, 1), UnitType::Pickerman).unwrap();
     }
 
     #[test]
-    #[should_panic]
     fn add_new_unit_outside_the_board() {
         let mut g = Game::new(2, (10, 50));
-        g.add_unit(1, (11, 20), UnitType::Knight);
+        let res = g.add_unit(1, (11, 20), UnitType::Knight);
+        assert_match!(res, Err(GameError::PositionOutsideTheBoard(..)));
     }
 
     #[test]
     fn add_new_unit_for_the_first_player() {
         let mut g = Game::new(2, (10, 10));
-        g.add_unit(0, (5, 5), UnitType::Knight);
+        g.add_unit(0, (5, 5), UnitType::Knight).unwrap();
         assert_eq!(g.num_of_units, 1);
         assert_eq!(g.units.len(), 1);
     }
@@ -252,7 +265,7 @@ mod tests {
     #[test]
     fn add_new_unit_for_the_last_player() {
         let mut g = Game::new(10, (100, 100));
-        g.add_unit(9, (25, 10), UnitType::Cavalry);
+        g.add_unit(9, (25, 10), UnitType::Cavalry).unwrap();
         assert_eq!(g.num_of_units, 1);
         assert_eq!(g.units.len(), 1); 
     }
@@ -278,15 +291,7 @@ mod tests {
         assert_eq!(u.id, 1);
         assert_eq!(u.owner_id, 3);
         assert_eq!(u.position, (2, 1));
-        assert!(match u.state {
-             UnitState::Idle => true,
-             _ => false,
-        });
-        assert!(match u.category {
-             UnitType::Cavalry => true,
-             _ => false,
-        });
-
+        assert_match!(u, Unit { state: UnitState::Idle, category: UnitType::Cavalry, ..});
     }
 
 
