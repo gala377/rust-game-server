@@ -1,3 +1,6 @@
+/// Module handles cofiguration files reading.
+/// And the internal config representation.
+
 extern crate toml;
 
 use std::error::Error;
@@ -5,20 +8,30 @@ use std::fmt;
 
 use super::helpers::file;
 
+
+
+/// Type Alias making return types more compact
 pub type ConfigResult<T> = Result<T, Box<Error>>;
 
+
+/// Game and server config taken from the config file.
 #[derive(Debug, Deserialize)]
 pub struct Config {
+    /// Server configuration.
     pub server: ServerConfig,
 }
 
+/// Server configuration struct. Read from the config file.
 #[derive(Debug, Deserialize)]
 pub struct ServerConfig {
+    /// Address the server should start on.
     pub address: String,
+    /// Number of the server port.
     pub port: u16,
 }
 
 impl Config {
+    /// Reads config from file. Returns Config on success, Err otherwise.
     pub fn from_file(file_name: &str) -> ConfigResult<Config> {
         let content = file::read(file_name)?;
         let config: Config = toml::from_str(content.as_str())?;
@@ -28,10 +41,12 @@ impl Config {
 }
 
 impl ServerConfig {
+    /// Creates new ServerConfig.
     pub fn new(address: String, port: u16) -> ServerConfig {
         ServerConfig { address, port }
     }
 
+    /// Reads ServerConfig from the config file.
     pub fn from_file(file_name: &str) -> ConfigResult<ServerConfig> {
         let config = Config::from_file(file_name)?;
         Ok(config.server)
@@ -39,6 +54,7 @@ impl ServerConfig {
 }
 
 impl fmt::Display for ServerConfig {
+    /// Represents server config as "address:port"
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}:{}", self.address, self.port)
     }

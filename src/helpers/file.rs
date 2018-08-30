@@ -1,3 +1,5 @@
+/// Helper functions for operations on files.
+
 extern crate tempfile;
 
 use std::error::Error;
@@ -7,7 +9,7 @@ use std::io::Read;
 #[cfg(test)]
 use std::io::Write;
 
-// Reads the whole file under path to the string
+/// Reads the whole file under path to the string.
 pub fn read(file_name: &str) -> Result<String, Box<Error>> {
     let mut file = File::open(file_name)?;
     let mut content = String::new();
@@ -16,7 +18,7 @@ pub fn read(file_name: &str) -> Result<String, Box<Error>> {
     Ok(content)
 }
 
-// Creates temp file with the given content
+/// Creates temp file with the given content
 #[cfg(test)]
 pub fn create_temp_with_content(content: &str) -> Result<tempfile::NamedTempFile, Box<Error>> {
     let mut tmp_file = tempfile::NamedTempFile::new()?;
@@ -40,6 +42,4 @@ mod tests {
         let file_content = read(file.path().to_str().unwrap()).unwrap();
         assert_eq!(content, file_content);
     }
-
-    
 }

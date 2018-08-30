@@ -11,19 +11,26 @@ use self::unit::{
 
 
 
-// todo document
+/// Game represents current game state.
+/// See documentation for internal logic.
 pub struct Game {
+    /// Num of players (active and inactive).
     num_of_players: u8,
+    /// Number of units currently in play (active).
     num_of_units: usize,
+    /// Boundaries of the game board.
     board_size: (usize, usize),
+    /// Units currently in play (active).
     units: Vec<Unit>,
 }
 
 
-// todo document
 impl Game {
     
-
+    /// Creates new Game struct with properties set as provided.
+    /// Panics if user tries to create invalid game:
+    ///     num_of_players < 2,
+    ///     board_size < (1, 1)
     pub fn new(num_of_players: u8, board_size: (usize, usize)) -> Game {
         assert!(board_size.0 > 0 && board_size.1 > 0);
         assert!(num_of_players > 1);
@@ -35,7 +42,8 @@ impl Game {
         }
     }
 
-
+    /// Returns placeholder unit stats.
+    /// Possible extension in future release.
     fn default_unit_stats() -> unit::Stats {
         unit::Stats {
             movement_range: 10,
@@ -44,7 +52,8 @@ impl Game {
         }
     }
 
-
+    /// Checks if requested move doesn't violate unit's stats.
+    /// todo the same for the Attack state. 
     fn assert_unit_move_within_reach(u: &Unit, (x, y): (usize, usize)) -> Result<(), GameError> {
         let pos = &u.position;
         let x_diff = (pos.0 as i32 - x as i32).abs() as usize;
@@ -58,10 +67,14 @@ impl Game {
 }
 
 
-// todo document
 impl Game {
     
-
+    /// Adds new Unit to the game.
+    /// Provides id, default stats and sets state to Idle.
+    /// 
+    /// Panics on attempt to add unit to the noexistig player.
+    /// Returns error on attempt to add unit utside the board boundaries
+    /// or on failure when adding the unit.
     pub fn add_unit<'a>(&'a mut self,
                 owner_id: u8,
                 position: (usize, usize),
@@ -83,6 +96,8 @@ impl Game {
     }
     }
 
+    /// Checks if given position is inside the currents board boundaries.
+    /// If true return Ok(()). PositionOutsideTheBoard otherwise.
     fn assert_position_in_board(&self, (x, y): (usize, usize)) -> Result<(), GameError> {
         if (x, y) >= self.board_size {
             return Err(GameError::PositionOutsideTheBoard(x, y))
@@ -91,6 +106,8 @@ impl Game {
     }
 
 
+    /// Given unit id returns reference to it.
+    /// If there is no unit with the given id returns NonExistingUnit
     pub fn get_unit(&self, unit_id: usize) -> Result<&Unit, GameError> {
         for u in &self.units {
             if u.id == unit_id {
@@ -100,7 +117,7 @@ impl Game {
         Err(GameError::NonExistingUnit(unit_id))
     }
 
-
+    /// The same as get_unit but the reference is mutable.
     fn get_unit_mut(&mut self, unit_id: usize) -> Result<&mut Unit, GameError> {
         for u in &mut self.units {
             if u.id == unit_id {
@@ -110,12 +127,19 @@ impl Game {
         Err(GameError::NonExistingUnit(unit_id))
     }
 
-    // todo tests
-    fn get_units_mut(&mut self, ids: Vec<usize>) -> Result<Vec<&mut Unit>, GameError> {
+    // todo test
+    /// Returns vec of references to the units with id's specified 
+    /// in the ids parameter. 
+    /// It's important to note, that this method returns Ok only if all of the
+    /// provided id's mathched.
+    /// If any of the provided ids doesn't map itself to an active unit method
+    /// returns Err(NonExistingUnit(unit_id)) where unit_id is the first
+    /// nomatching id. 
+    pub fn get_units(&self, ids: Vec<usize>) -> Result<Vec<&Unit>, GameError> {
         let mut units = Vec::new();
         let mut found_units = HashSet::new();
         let requested_units: HashSet<usize> = ids.iter().cloned().collect();
-        for u in &mut self.units {
+        for u in &self.units {
             if ids.contains(&u.id) {
                 found_units.insert(u.id);
                 units.push(u);
@@ -131,7 +155,8 @@ impl Game {
         Ok(units)
     }
 
-
+    /// After movement assertions changes unit state
+    /// to Moving at given postion.
     pub fn move_unit(&mut self, unit_id: usize, (x, y): (usize, usize)) -> Result<(), GameError> {
         self.assert_position_in_board((x, y))?;
         let unit = self.get_unit_mut(unit_id)?;
@@ -142,24 +167,42 @@ impl Game {
 
 
     // todo tests
+    /// Gets both units. Sets their state as attack and the position as
+    /// average of both of their positions.
+    /// If there was an error, no change will be made in both of the units. 
     pub fn battle_units(&mut self, u1_id: usize, u2_id: usize) -> Result<(), GameError> {
-        let mut units = self.get_units_mut(vec![u1_id, u2_id])?;
+        let old_state: unit::State;
+        let (x, y): (usize, usize);
+        {
+            let units = self.get_units(vec![u1_id, u2_id])?;
         
         assert!(units.len() == 2);
         let u1_pos = units[0].position;
         let u2_pos = units[1].position;
 
-        let (x, y) = (
-            (u1_pos.0 + u2_pos.0)/2,
-            (u1_pos.1 + u2_pos.1)/2);
+            x = (u1_pos.0 + u2_pos.0)/2;
+            y = (u1_pos.1 + u2_pos.1)/2;
 
-        units[0].state = unit::State::Attack(x, y);
-        units[1].state = unit::State::Attack(x, y);
-
-        Ok(())
+            old_state = units[0].state;
+        }
+        self.attack_position(u1_id, (x, y))?;
+        match self.attack_position(u2_id, (x, y)) {
+            ret @ Ok(()) => ret,
+            ret @ Err(_) => {
+                match self.get_unit_mut(u1_id) {
+                    Ok(u) => {
+                        u.state = old_state;
+                        ret
+                    },
+                    _ => ret,
     }
    
+            },
+        }
+    }
 
+    /// After movement assertions changes unit state
+    /// to Moving at given postion.
     pub fn attack_position(&mut self, unit_id: usize, (x, y): (usize, usize)) -> 
         Result<(), GameError> {
         
@@ -171,7 +214,7 @@ impl Game {
     }
 
 
-    // todo test
+    // todo test, doc
     pub fn resolve_moves(&mut self) {
         {   
             let mut unresolved = self.units_to_be_moved();
@@ -183,7 +226,7 @@ impl Game {
     }
 
 
-    // todo test
+    // todo test, doc
     fn units_to_be_moved(&mut self) -> Vec<&mut Unit> {
         let mut res = Vec::new();
         for u in &mut self.units {
@@ -198,13 +241,15 @@ impl Game {
     }
 
 
-    // todo test
+    // todo test, doc
     fn resolve_blockades(&mut self) {
         // todo body
     }
 
 
     // todo test
+    /// If the game os over returns Ok with the id of the
+    /// player who won. None otherwise.
     pub fn game_over(&self) -> Option<usize> {
         // todo body
         None

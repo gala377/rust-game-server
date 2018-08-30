@@ -1,2 +1,5 @@
-// helper functions for operations on file
+/// Defines all purpose functions to use
+/// in project.
+
+
 pub mod file;
