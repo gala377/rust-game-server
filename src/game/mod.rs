@@ -38,7 +38,7 @@ impl Game {
                 position: (usize, usize),
                 category: UnitType) -> Result<usize, GameError> {
         assert!(owner_id < self.num_of_players);
-        if position < self.board_size {
+        if position >= self.board_size {
             let (x, y) = position;
             return Err(GameError::PositionOutsideTheBoard(x, y))
         }
@@ -197,14 +197,14 @@ mod tests {
     use super::*;
 
     macro_rules! assert_match {
-        ($id:ident, $( $p:pat )+) => {
-            assert!(match $id {
+        ($e:expr, $( $p:pat )+) => {
+            assert!(match $e {
                 $(
                     $p => true,
                 ),*
                 _ => false,
             });
-        };
+        }
     }
 
     #[test]
@@ -232,12 +232,17 @@ mod tests {
     }
 
     #[test]
-    fn game_struct_cretaion() {
+    fn game_struct_creation() {
         let g = Game::new(4, (10, 10));
-        assert_eq!(g.num_of_players, 4);
-        assert_eq!(g.board_size, (10, 10));
-        assert_eq!(g.num_of_units, 0);
         assert_eq!(g.units.len(), 0);
+        assert_match!(
+            g,
+            Game {
+                num_of_players: 4,
+                board_size: (10, 10),
+                num_of_units: 0,
+                ..
+            });
     }
 
     #[test]
@@ -250,8 +255,9 @@ mod tests {
     #[test]
     fn add_new_unit_outside_the_board() {
         let mut g = Game::new(2, (10, 50));
-        let res = g.add_unit(1, (11, 20), UnitType::Knight);
-        assert_match!(res, Err(GameError::PositionOutsideTheBoard(..)));
+        assert_match!(
+            g.add_unit(1, (11, 20), UnitType::Knight),
+            Err(GameError::PositionOutsideTheBoard(..)));
     }
 
     #[test]
@@ -273,9 +279,9 @@ mod tests {
     #[test]
     fn add_multiple_units() {
         let mut g = Game::new(10, (10, 10));
-        g.add_unit(0, (1, 1), UnitType::Cavalry);
-        g.add_unit(3, (2, 1), UnitType::Cavalry);
-        g.add_unit(2, (3, 1), UnitType::Cavalry);
+        g.add_unit(0, (1, 1), UnitType::Cavalry).unwrap();
+        g.add_unit(3, (2, 1), UnitType::Cavalry).unwrap();
+        g.add_unit(2, (3, 1), UnitType::Cavalry).unwrap();
         assert_eq!(g.num_of_units, 3);
         assert_eq!(g.units.len(), 3); 
     }
@@ -283,15 +289,18 @@ mod tests {
     #[test]
     fn check_unit_data_after_addition() {
         let mut g = Game::new(10, (10, 10));
-        g.add_unit(0, (1, 1), UnitType::Pickerman);
-        g.add_unit(3, (2, 1), UnitType::Cavalry);
-        
-        let u: &Unit = &g.units[1];
-        
-        assert_eq!(u.id, 1);
-        assert_eq!(u.owner_id, 3);
-        assert_eq!(u.position, (2, 1));
-        assert_match!(u, Unit { state: UnitState::Idle, category: UnitType::Cavalry, ..});
+        g.add_unit(0, (1, 1), UnitType::Pickerman).unwrap();
+        g.add_unit(3, (2, 1), UnitType::Cavalry).unwrap();  
+        assert_match!(
+            &g.units[1],
+            Unit {
+                state: UnitState::Idle,
+                category: UnitType::Cavalry,
+                id: 1,
+                owner_id: 3,
+                position: (2, 1),
+                ..
+            });
     }
 
 
@@ -299,26 +308,24 @@ mod tests {
     #[should_panic]
     fn add_new_unit_after_the_last_player() {
         let mut g = Game::new(10, (10, 10));
-        g.add_unit(10, (1, 1), UnitType::Cavalry);
+        g.add_unit(10, (1, 1), UnitType::Cavalry).unwrap();
     }
 
     #[test]
     fn get_unit_by_position() {
         let mut g = Game::new(2, (5, 5));
-        g.add_unit(0, (1, 1), UnitType::Cavalry);
-        let u: &Unit = g.get_unit(0).unwrap();
-
-        assert_eq!(u.id, 0);
-        assert_eq!(u.owner_id, 0);
-        assert_eq!(u.position, (1, 1));
-        assert!(match u.state {
-             UnitState::Idle => true,
-             _ => false,
-        });
-        assert!(match u.category {
-             UnitType::Cavalry => true,
-             _ => false,
-        });
+        g.add_unit(0, (1, 1), UnitType::Cavalry).unwrap();
+        assert_match!(
+            g.get_unit(0),
+            Ok(Unit{
+                state: UnitState::Idle,
+                category: UnitType::Cavalry,
+                id: 0,
+                owner_id: 0,
+                position: (1, 1),
+                ..
+            })
+        );
     }
 
     #[test]
@@ -339,7 +346,7 @@ mod tests {
     #[test]
     fn get_unit_by_id() {
         let mut g = Game::new(2, (5, 5));
-        g.add_unit(0, (1, 1), UnitType::Cavalry);
+        g.add_unit(0, (1, 1), UnitType::Cavalry).unwrap();
         let u: &Unit = g.unit_by_id(0).unwrap();
 
         assert_eq!(u.id, 0);
@@ -373,7 +380,7 @@ mod tests {
     #[test]
     fn move_unit_inside_boundaries() {
         let mut g = Game::new(2, (10, 10));
-        g.add_unit(0, (2, 2), UnitType::Cavalry);
+        g.add_unit(0, (2, 2), UnitType::Cavalry).unwrap();
         assert!(match g.move_unit(0, (4, 4)) {
             Ok(_) => {
                 let u = g.get_unit(0).unwrap();
@@ -390,7 +397,7 @@ mod tests {
     #[test]
     fn move_unit_outside_boundaries() {
         let mut g = Game::new(3, (10, 10));
-        g.add_unit(0, (2, 2), UnitType::Cavalry);
+        g.add_unit(0, (2, 2), UnitType::Cavalry).unwrap();
         assert!(match g.move_unit(0, (12, 2)) {
             Ok(_) => false,
             Err(_) => true,
@@ -400,7 +407,7 @@ mod tests {
     #[test]
     fn attack_position_inside_boundaries() {
         let mut g = Game::new(2, (10, 10));
-        g.add_unit(0, (2, 2), UnitType::Cavalry);
+        g.add_unit(0, (2, 2), UnitType::Cavalry).unwrap();
         assert!(match g.attack_position(0, (4, 4)) {
             Ok(_) => {
                 let u = g.get_unit(0).unwrap();
@@ -417,7 +424,7 @@ mod tests {
     #[test]
     fn attack_position_outside_boundaries() {
         let mut g = Game::new(2, (10, 10));
-        g.add_unit(0, (2, 2), UnitType::Cavalry);
+        g.add_unit(0, (2, 2), UnitType::Cavalry).unwrap();
         assert!(match g.attack_position(0, (11, 10)) {
             Ok(_) => false,
             Err(_) => true,
@@ -427,7 +434,7 @@ mod tests {
     #[test]
     fn move_unit_outside_unit_range() {
         let mut g = Game::new(2, (20,20));
-        g.add_unit(0, (0, 0), UnitType::Pickerman);
+        g.add_unit(0, (0, 0), UnitType::Pickerman).unwrap();
         assert!(match g.move_unit(0, (19, 19)) {
             Ok(_) => false,
             Err(_) => true,
@@ -437,11 +444,8 @@ mod tests {
     #[test]
     fn attack_position_outside_unit_range() {
         let mut g = Game::new(2, (20,20));
-        g.add_unit(0, (0, 0), UnitType::Knight);
-        assert!(match g.attack_position(0, (19, 19)) {
-            Ok(_) => false,
-            Err(_) => true,
-        })
+        g.add_unit(0, (0, 0), UnitType::Knight).unwrap();
+        assert_match!(g.attack_position(0, (19, 19)), Err(_));
     }
 
 }
