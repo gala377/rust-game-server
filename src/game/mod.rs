@@ -6,9 +6,6 @@ use std::collections::HashSet;
 use self::error::GameError;
 use self::unit::{
     Unit,
-    UnitType,
-    UnitState,
-    UnitStats,
 };
 
 
@@ -39,8 +36,8 @@ impl Game {
     }
 
 
-    fn default_unit_stats() -> UnitStats {
-        UnitStats {
+    fn default_unit_stats() -> unit::Stats {
+        unit::Stats {
             movement_range: 10,
             vision_range: 10,
             attack_range: 10,     
@@ -68,7 +65,7 @@ impl Game {
     pub fn add_unit<'a>(&'a mut self,
                 owner_id: u8,
                 position: (usize, usize),
-                category: UnitType) -> Result<&'a Unit, GameError> {
+                category: unit::Category) -> Result<&'a Unit, GameError> {
         assert!(owner_id < self.num_of_players);
         self.assert_position_in_board(position)?;
         self.units.push(Unit{
@@ -77,7 +74,7 @@ impl Game {
                 position,
                 category,
                 stats: Game::default_unit_stats(),
-                state: UnitState::Idle,
+                state: unit::State::Idle,
         });
         self.num_of_units += 1;
         match self.units.last() {
@@ -139,7 +136,7 @@ impl Game {
         self.assert_position_in_board((x, y))?;
         let unit = self.get_unit_mut(unit_id)?;
         Game::assert_unit_move_within_reach(&unit, (x, y))?;
-        unit.state = UnitState::Moving(x, y);
+        unit.state = unit::State::Moving(x, y);
         Ok(())
     }
 
@@ -156,8 +153,8 @@ impl Game {
             (u1_pos.0 + u2_pos.0)/2,
             (u1_pos.1 + u2_pos.1)/2);
 
-        units[0].state = UnitState::Attack(x, y);
-        units[1].state = UnitState::Attack(x, y);
+        units[0].state = unit::State::Attack(x, y);
+        units[1].state = unit::State::Attack(x, y);
 
         Ok(())
     }
@@ -169,7 +166,7 @@ impl Game {
         self.assert_position_in_board((x, y))?;
         let unit = self.get_unit_mut(unit_id)?;
         Game::assert_unit_move_within_reach(&unit, (x, y))?;
-        unit.state = UnitState::Attack(x, y);
+        unit.state = unit::State::Attack(x, y);
         Ok(())
     }
 
@@ -191,7 +188,7 @@ impl Game {
         let mut res = Vec::new();
         for u in &mut self.units {
             match u.state {
-                UnitState::Moving(..) | UnitState::Attack(..) => {
+                unit::State::Moving(..) | unit::State::Attack(..) => {
                     res.push(u);
                 }
                 _ => (), 
@@ -272,21 +269,21 @@ mod tests {
     #[should_panic]
     fn add_new_unit_for_non_existing_player() {
         let mut g = Game::new(2, (10, 10));
-        g.add_unit(3, (1, 1), UnitType::Pickerman).unwrap();
+        g.add_unit(3, (1, 1), unit::Category::Pickerman).unwrap();
     }
 
     #[test]
     fn add_new_unit_outside_the_board() {
         let mut g = Game::new(2, (10, 50));
         assert_match!(
-            g.add_unit(1, (11, 20), UnitType::Knight),
+            g.add_unit(1, (11, 20), unit::Category::Knight),
             Err(GameError::PositionOutsideTheBoard(..)));
     }
 
     #[test]
     fn add_new_unit_for_the_first_player() {
         let mut g = Game::new(2, (10, 10));
-        g.add_unit(0, (5, 5), UnitType::Knight).unwrap();
+        g.add_unit(0, (5, 5), unit::Category::Knight).unwrap();
         assert_eq!(g.num_of_units, 1);
         assert_eq!(g.units.len(), 1);
     }
@@ -294,7 +291,7 @@ mod tests {
     #[test]
     fn add_new_unit_for_the_last_player() {
         let mut g = Game::new(10, (100, 100));
-        g.add_unit(9, (25, 10), UnitType::Cavalry).unwrap();
+        g.add_unit(9, (25, 10), unit::Category::Cavalry).unwrap();
         assert_eq!(g.num_of_units, 1);
         assert_eq!(g.units.len(), 1); 
     }
@@ -302,9 +299,9 @@ mod tests {
     #[test]
     fn add_multiple_units() {
         let mut g = Game::new(10, (10, 10));
-        g.add_unit(0, (1, 1), UnitType::Cavalry).unwrap();
-        g.add_unit(3, (2, 1), UnitType::Cavalry).unwrap();
-        g.add_unit(2, (3, 1), UnitType::Cavalry).unwrap();
+        g.add_unit(0, (1, 1), unit::Category::Cavalry).unwrap();
+        g.add_unit(3, (2, 1), unit::Category::Cavalry).unwrap();
+        g.add_unit(2, (3, 1), unit::Category::Cavalry).unwrap();
         assert_eq!(g.num_of_units, 3);
         assert_eq!(g.units.len(), 3); 
     }
@@ -312,13 +309,13 @@ mod tests {
     #[test]
     fn check_unit_data_after_addition() {
         let mut g = Game::new(10, (10, 10));
-        g.add_unit(0, (1, 1), UnitType::Pickerman).unwrap();
-        g.add_unit(3, (2, 1), UnitType::Cavalry).unwrap();  
+        g.add_unit(0, (1, 1), unit::Category::Pickerman).unwrap();
+        g.add_unit(3, (2, 1), unit::Category::Cavalry).unwrap();  
         assert_match!(
             &g.units[1],
             Unit {
-                state: UnitState::Idle,
-                category: UnitType::Cavalry,
+                state: unit::State::Idle,
+                category: unit::Category::Cavalry,
                 id: 1,
                 owner_id: 3,
                 position: (2, 1),
@@ -331,18 +328,18 @@ mod tests {
     #[should_panic]
     fn add_new_unit_after_the_last_player() {
         let mut g = Game::new(10, (10, 10));
-        g.add_unit(10, (1, 1), UnitType::Cavalry).unwrap();
+        g.add_unit(10, (1, 1), unit::Category::Cavalry).unwrap();
     }
 
     #[test]
     fn get_unit() {
         let mut g = Game::new(2, (5, 5));
-        g.add_unit(0, (1, 1), UnitType::Cavalry).unwrap();
+        g.add_unit(0, (1, 1), unit::Category::Cavalry).unwrap();
         assert_match!(
             g.get_unit(0),
             Ok(Unit{
-                state: UnitState::Idle,
-                category: UnitType::Cavalry,
+                state: unit::State::Idle,
+                category: unit::Category::Cavalry,
                 id: 0,
                 owner_id: 0,
                 position: (1, 1),
@@ -360,11 +357,11 @@ mod tests {
     #[test]
     fn move_unit_inside_boundaries() {
         let mut g = Game::new(2, (10, 10));
-        g.add_unit(0, (2, 2), UnitType::Cavalry).unwrap();
+        g.add_unit(0, (2, 2), unit::Category::Cavalry).unwrap();
         assert!(match g.move_unit(0, (4, 4)) {
             Ok(_) => {
                 let u = g.get_unit(0).unwrap();
-                if let UnitState::Moving(4, 4) = u.state {
+                if let unit::State::Moving(4, 4) = u.state {
                     true
                 } else {
                     false
@@ -377,18 +374,18 @@ mod tests {
     #[test]
     fn move_unit_outside_boundaries() {
         let mut g = Game::new(3, (10, 10));
-        g.add_unit(0, (2, 2), UnitType::Cavalry).unwrap();
+        g.add_unit(0, (2, 2), unit::Category::Cavalry).unwrap();
         assert_match!(g.move_unit(0, (12, 2)), Err(_));
     }
 
     #[test]
     fn attack_position_inside_boundaries() {
         let mut g = Game::new(2, (10, 10));
-        g.add_unit(0, (2, 2), UnitType::Cavalry).unwrap();
+        g.add_unit(0, (2, 2), unit::Category::Cavalry).unwrap();
         assert!(match g.attack_position(0, (4, 4)) {
             Ok(_) => {
                 let u = g.get_unit(0).unwrap();
-                if let UnitState::Attack(4, 4) = u.state {
+                if let unit::State::Attack(4, 4) = u.state {
                     true
                 } else {
                     false
@@ -401,21 +398,21 @@ mod tests {
     #[test]
     fn attack_position_outside_boundaries() {
         let mut g = Game::new(2, (10, 10));
-        g.add_unit(0, (2, 2), UnitType::Cavalry).unwrap();
+        g.add_unit(0, (2, 2), unit::Category::Cavalry).unwrap();
         assert_match!(g.attack_position(0, (11, 10)), Err(_))
     }
 
     #[test]
     fn move_unit_outside_unit_range() {
         let mut g = Game::new(2, (20,20));
-        g.add_unit(0, (0, 0), UnitType::Pickerman).unwrap();
+        g.add_unit(0, (0, 0), unit::Category::Pickerman).unwrap();
         assert_match!(g.move_unit(0, (19, 19)), Err(_));
     }
 
     #[test]
     fn attack_position_outside_unit_range() {
         let mut g = Game::new(2, (20,20));
-        g.add_unit(0, (0, 0), UnitType::Knight).unwrap();
+        g.add_unit(0, (0, 0), unit::Category::Knight).unwrap();
         assert_match!(g.attack_position(0, (19, 19)), Err(_));
     }
 

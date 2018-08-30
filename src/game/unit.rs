@@ -3,25 +3,25 @@ pub struct Unit {
     pub id: usize,
     pub owner_id: u8,
     pub position: (usize, usize),
-    pub category: UnitType,
-    pub stats: UnitStats,
-    pub state: UnitState,
+    pub category: Category,
+    pub stats: Stats,
+    pub state: State,
 }
 
-pub enum UnitType {
+pub enum Category {
     Cavalry,
     Knight,
     Pickerman,
 }
 
-pub struct UnitStats {
+pub struct Stats {
     pub movement_range: usize,
     pub attack_range: usize,
     pub vision_range: usize,
 }
 
 /// Represents current Unit state
-pub enum UnitState {
+pub enum State {
     /// Default or no action to perform
     Idle,
     /// Unit is moving to the specified location trying to avoid collidin with other units
