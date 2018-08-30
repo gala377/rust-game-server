@@ -11,6 +11,9 @@ use self::unit::{
     UnitStats,
 };
 
+
+
+
 // todo document
 pub struct Game {
     num_of_players: u8,
@@ -19,9 +22,11 @@ pub struct Game {
     units: Vec<Unit>,
 }
 
+
 // todo document
 impl Game {
     
+
     pub fn new(num_of_players: u8, board_size: (usize, usize)) -> Game {
         assert!(board_size.0 > 0 && board_size.1 > 0);
         assert!(num_of_players > 1);
@@ -33,35 +38,6 @@ impl Game {
         }
     }
 
-    pub fn add_unit(&mut self,
-                owner_id: u8,
-                position: (usize, usize),
-                category: UnitType) -> Result<usize, GameError> {
-        assert!(owner_id < self.num_of_players);
-        if position >= self.board_size {
-            let (x, y) = position;
-            return Err(GameError::PositionOutsideTheBoard(x, y))
-        }
-        self.units.push(Unit{
-                id: self.num_of_units,
-                owner_id,
-                position,
-                category,
-                stats: Game::default_unit_stats(),
-                state: UnitState::Idle,
-        });
-        self.num_of_units += 1;
-        Ok(self.num_of_units-1)    
-    }
-
-    pub fn get_unit(&self, unit_id: usize) -> Result<&Unit, GameError> {
-        for u in &self.units {
-            if u.id == unit_id {
-                return Ok(u)
-            }
-        }
-        Err(GameError::NonExistingUnit(unit_id))
-    }
 
     fn default_unit_stats() -> UnitStats {
         UnitStats {
@@ -71,12 +47,6 @@ impl Game {
         }
     }
 
-    fn assert_position_in_board(&self, x: usize, y: usize) -> Result<(), GameError> {
-        if x >= self.board_size.0 || y >= self.board_size.1 {
-            return Err(GameError::PositionOutsideTheBoard(x, y))
-        }
-        Ok(())
-    }
 
     fn assert_unit_move_within_reach(u: &Unit, (x, y): (usize, usize)) -> Result<(), GameError> {
         let pos = &u.position;
@@ -88,17 +58,95 @@ impl Game {
         Ok(())
     }
 
+}
+
+
+// todo document
+impl Game {
+    
+
+    pub fn add_unit<'a>(&'a mut self,
+                owner_id: u8,
+                position: (usize, usize),
+                category: UnitType) -> Result<&'a Unit, GameError> {
+        assert!(owner_id < self.num_of_players);
+        self.assert_position_in_board(position)?;
+        self.units.push(Unit{
+                id: self.num_of_units,
+                owner_id,
+                position,
+                category,
+                stats: Game::default_unit_stats(),
+                state: UnitState::Idle,
+        });
+        self.num_of_units += 1;
+        match self.units.last() {
+            Some(val) => Ok(val),
+            None => Err(GameError::NonExistingUnit(self.num_of_units-1)),
+    }
+    }
+
+    fn assert_position_in_board(&self, (x, y): (usize, usize)) -> Result<(), GameError> {
+        if (x, y) >= self.board_size {
+            return Err(GameError::PositionOutsideTheBoard(x, y))
+        }
+        Ok(())
+    }
+
+
+    pub fn get_unit(&self, unit_id: usize) -> Result<&Unit, GameError> {
+        for u in &self.units {
+            if u.id == unit_id {
+                return Ok(u)
+            }
+        }
+        Err(GameError::NonExistingUnit(unit_id))
+    }
+
+
+    fn get_unit_mut(&mut self, unit_id: usize) -> Result<&mut Unit, GameError> {
+        for u in &mut self.units {
+            if u.id == unit_id {
+                return Ok(u)
+        }
+    }
+        Err(GameError::NonExistingUnit(unit_id))
+    }
+
+    // todo tests
+    fn get_units_mut(&mut self, ids: Vec<usize>) -> Result<Vec<&mut Unit>, GameError> {
+        let mut units = Vec::new();
+        let mut found_units = HashSet::new();
+        let requested_units: HashSet<usize> = ids.iter().cloned().collect();
+        for u in &mut self.units {
+            if ids.contains(&u.id) {
+                found_units.insert(u.id);
+                units.push(u);
+        }
+    }
+        if requested_units != found_units {
+            let mut diff = requested_units.difference(&found_units);
+            return match diff.next() {
+                Some(&val) => Err(GameError::NonExistingUnit(val)),
+                None => panic!("This sets difference should never be empty!"),
+        }
+    }
+        Ok(units)
+    }
+
+
     pub fn move_unit(&mut self, unit_id: usize, (x, y): (usize, usize)) -> Result<(), GameError> {
-        self.assert_position_in_board(x, y)?;
-        let unit = self.unit_by_id(unit_id)?;
+        self.assert_position_in_board((x, y))?;
+        let unit = self.get_unit_mut(unit_id)?;
         Game::assert_unit_move_within_reach(&unit, (x, y))?;
         unit.state = UnitState::Moving(x, y);
         Ok(())
     }
 
+
     // todo tests
     pub fn battle_units(&mut self, u1_id: usize, u2_id: usize) -> Result<(), GameError> {
-        let mut units = self.units_by_id(vec![u1_id, u2_id])?;
+        let mut units = self.get_units_mut(vec![u1_id, u2_id])?;
         
         assert!(units.len() == 2);
         let u1_pos = units[0].position;
@@ -114,45 +162,17 @@ impl Game {
         Ok(())
     }
    
+
     pub fn attack_position(&mut self, unit_id: usize, (x, y): (usize, usize)) -> 
         Result<(), GameError> {
         
-        self.assert_position_in_board(x, y)?;
-        let unit = self.unit_by_id(unit_id)?;
+        self.assert_position_in_board((x, y))?;
+        let unit = self.get_unit_mut(unit_id)?;
         Game::assert_unit_move_within_reach(&unit, (x, y))?;
         unit.state = UnitState::Attack(x, y);
         Ok(())
     }
 
-    fn unit_by_id(&mut self, id: usize) -> Result<&mut Unit, GameError> {
-        for u in &mut self.units {
-            if u.id == id {
-                return Ok(u)
-            }
-        }
-        Err(GameError::NonExistingUnit(id))
-    }
-
-    // todo tests
-    fn units_by_id(&mut self, ids: Vec<usize>) -> Result<Vec<&mut Unit>, GameError> {
-        let mut units = Vec::new();
-        let mut found_units = HashSet::new();
-        let requested_units: HashSet<usize> = ids.iter().cloned().collect();
-        for u in &mut self.units {
-            if ids.contains(&u.id) {
-                found_units.insert(u.id);
-                units.push(u);
-            }
-        }
-        if requested_units != found_units {
-            let mut diff = requested_units.difference(&found_units);
-            return match diff.next() {
-                Some(&val) => Err(GameError::NonExistingUnit(val)),
-                None => panic!("This sets difference should never be empty!"),
-            }
-        } 
-        Ok(units)
-    }
 
     // todo test
     pub fn resolve_moves(&mut self) {
@@ -164,6 +184,7 @@ impl Game {
         }
         self.resolve_blockades();
     }
+
 
     // todo test
     fn units_to_be_moved(&mut self) -> Vec<&mut Unit> {
@@ -179,10 +200,12 @@ impl Game {
         res
     }
 
+
     // todo test
     fn resolve_blockades(&mut self) {
         // todo body
     }
+
 
     // todo test
     pub fn game_over(&self) -> Option<usize> {
@@ -312,7 +335,7 @@ mod tests {
     }
 
     #[test]
-    fn get_unit_by_position() {
+    fn get_unit() {
         let mut g = Game::new(2, (5, 5));
         g.add_unit(0, (1, 1), UnitType::Cavalry).unwrap();
         assert_match!(
@@ -329,52 +352,9 @@ mod tests {
     }
 
     #[test]
-    fn get_notexisting_unit() {
+    fn get_noexisting_unit() {
         let g = Game::new(2, (5,5));
-        let res = g.get_unit(0);
-        assert!(match res {
-            Err(err) => {
-                match err {
-                    GameError::NonExistingUnit(id) if id == 0 => true,
-                    _ => false,
-                }
-            }
-            _ => false,
-        })
-    }
-
-    #[test]
-    fn get_unit_by_id() {
-        let mut g = Game::new(2, (5, 5));
-        g.add_unit(0, (1, 1), UnitType::Cavalry).unwrap();
-        let u: &Unit = g.unit_by_id(0).unwrap();
-
-        assert_eq!(u.id, 0);
-        assert_eq!(u.owner_id, 0);
-        assert_eq!(u.position, (1, 1));
-        assert!(match u.state {
-             UnitState::Idle => true,
-             _ => false,
-        });
-        assert!(match u.category {
-             UnitType::Cavalry => true,
-             _ => false,
-        });
-    }
-
-    #[test]
-    fn get_notexisting_unit_by_id() {
-        let g = Game::new(2, (5,5));
-        let res = g.get_unit(0);
-        assert!(match res {
-            Err(err) => {
-                match err {
-                    GameError::NonExistingUnit(id) if id == 0 => true,
-                    _ => false,
-                }
-            }
-            _ => false,
-        })
+        assert_match!(g.get_unit(0), Err(GameError::NonExistingUnit(0)))
     }
 
     #[test]
@@ -398,10 +378,7 @@ mod tests {
     fn move_unit_outside_boundaries() {
         let mut g = Game::new(3, (10, 10));
         g.add_unit(0, (2, 2), UnitType::Cavalry).unwrap();
-        assert!(match g.move_unit(0, (12, 2)) {
-            Ok(_) => false,
-            Err(_) => true,
-        });
+        assert_match!(g.move_unit(0, (12, 2)), Err(_));
     }
 
     #[test]
@@ -425,20 +402,14 @@ mod tests {
     fn attack_position_outside_boundaries() {
         let mut g = Game::new(2, (10, 10));
         g.add_unit(0, (2, 2), UnitType::Cavalry).unwrap();
-        assert!(match g.attack_position(0, (11, 10)) {
-            Ok(_) => false,
-            Err(_) => true,
-        });
+        assert_match!(g.attack_position(0, (11, 10)), Err(_))
     }
 
     #[test]
     fn move_unit_outside_unit_range() {
         let mut g = Game::new(2, (20,20));
         g.add_unit(0, (0, 0), UnitType::Pickerman).unwrap();
-        assert!(match g.move_unit(0, (19, 19)) {
-            Ok(_) => false,
-            Err(_) => true,
-        });
+        assert_match!(g.move_unit(0, (19, 19)), Err(_));
     }
 
     #[test]
