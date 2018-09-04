@@ -248,14 +248,32 @@ impl Game {
     }
 
     // todo test, doc
-    fn make_move(&mut self, units: BinaryHeap<unit::MovingWrapper>) -> BinaryHeap<unit::MovingWrapper> {
+    fn make_move(&mut self, mut units: BinaryHeap<unit::MovingWrapper>) -> BinaryHeap<unit::MovingWrapper> {
         let filtered = BinaryHeap::new();
         for u in units.drain() {
-            // todo make it a match case
-            let unit = self.get_unit_mut(u.unit_id).unwrap()
-            // todo body
+            self.resolve_unit(&u);
         }
         filtered
+    }
+
+    // todo test, doc
+    fn resolve_unit(&mut self, unit: &unit::MovingWrapper) {
+        // todo make a match case
+        let u = self.get_unit_mut(unit.unit_id).unwrap();
+        match u.state {
+            unit::State::Moving(x, y) => {
+                // if self.field_empty(x, y) {
+                //      move unit here
+                //      if x, y = unit.position change state to idle
+                //      if enemy unit in vision change state to idle
+                //      create new unit with updated moves made
+                //      return it
+                // }
+            },
+            unit::State::Attack(x, y) => {
+            },
+            _ => {},
+        }
     }
 
     // todo test, doc
