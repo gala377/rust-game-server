@@ -1,5 +1,7 @@
 /// Defines Unit datatype and any related structs.
 
+use std::cmp::Ordering;
+
 /// Unit represents single soldier entity
 /// inside the game.
 pub struct Unit {
@@ -17,9 +19,46 @@ pub struct Unit {
     pub state: State,
 }
 
+/// Wraps Unit during it's moving process
+/// and counts number of moves already made.
+pub struct MovingWrapper {
+    pub moves_made: usize,
+    pub unit_id: usize,
+}
+
+impl MovingWrapper {
+    pub fn new(unit_id: usize) -> MovingWrapper {
+        MovingWrapper {
+            moves_made: 0,
+            unit_id,
+        }
+    }
+}
+
+impl Ord for MovingWrapper {
+    fn cmp(&self, other: &MovingWrapper) -> Ordering {
+        self.moves_made.cmp(&other.moves_made)
+    }
+}
+
+impl PartialOrd for MovingWrapper {
+    fn partial_cmp(&self, other: &MovingWrapper) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl PartialEq for MovingWrapper {
+    fn eq(&self, other: &MovingWrapper) -> bool {
+        self.moves_made == other.moves_made
+    }
+}
+
+impl Eq for MovingWrapper {}
+
+
 /// Category of the Unit.
 /// As in Rock-Scissor-Paper each category
-/// has one other as it's weakness and 
+/// has one other as it's weakness and
 /// another one as it's advantage.
 #[derive(Copy, Clone)]
 pub enum Category {
@@ -32,7 +71,7 @@ pub enum Category {
 }
 
 /// Unit statistics determinig it's ability to move.
-#[derive(Copy, Clone)] 
+#[derive(Copy, Clone)]
 pub struct Stats {
     /// Number of tiles Unit can be moved during one turn while in Moving state.
     pub movement_range: usize,

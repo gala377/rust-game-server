@@ -1,5 +1,4 @@
 /// Defines Error types for the game struct to use.
-
 use std::error::Error;
 use std::fmt;
 
@@ -23,7 +22,7 @@ pub enum GameError {
 impl Error for GameError {}
 
 impl fmt::Display for GameError {
-    // todo does this even work? 
+    // todo does this even work?
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{:?}", &self)
     }
