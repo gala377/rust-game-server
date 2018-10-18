@@ -4,3 +4,10 @@
 # Cargo.lock
 
 **/*.rs.bk
+
+
+
+# editors folders
+.vscode/
+.idea/
+.vim/

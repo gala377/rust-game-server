@@ -1,4 +1,3 @@
-
 extern crate glib;
 
 use std::io::prelude::*;
@@ -18,7 +17,6 @@ fn main() {
         let stream = stream.unwrap();
         handle_connection(stream);
     }
-
 }
 
 fn handle_connection(mut stream: TcpStream) {
@@ -28,5 +26,5 @@ fn handle_connection(mut stream: TcpStream) {
     let response = "HTTP/1.1 200 OK\r\n\r\n";
 
     stream.write(response.as_bytes()).unwrap();
-    stream.flush().unwrap(); 
+    stream.flush().unwrap();
 }
