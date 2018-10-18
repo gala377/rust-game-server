@@ -21,39 +21,39 @@ pub struct Unit {
 
 /// Wraps Unit during it's moving process
 /// and counts number of moves already made.
-pub struct MovingWrapper {
+pub struct MovingWrapper<'a> {
     pub moves_made: usize,
-    pub unit_id: usize,
+    pub unit: &'a Unit,
 }
 
-impl MovingWrapper {
-    pub fn new(unit_id: usize) -> MovingWrapper {
+impl<'a> MovingWrapper<'a> {
+    pub fn new(unit: &Unit) -> MovingWrapper {
         MovingWrapper {
             moves_made: 0,
-            unit_id,
+            unit,
         }
     }
 }
 
-impl Ord for MovingWrapper {
+impl<'a> Ord for MovingWrapper<'a> {
     fn cmp(&self, other: &MovingWrapper) -> Ordering {
         self.moves_made.cmp(&other.moves_made)
     }
 }
 
-impl PartialOrd for MovingWrapper {
+impl<'a> PartialOrd for MovingWrapper<'a> {
     fn partial_cmp(&self, other: &MovingWrapper) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl PartialEq for MovingWrapper {
+impl<'a> PartialEq for MovingWrapper<'a> {
     fn eq(&self, other: &MovingWrapper) -> bool {
         self.moves_made == other.moves_made
     }
 }
 
-impl Eq for MovingWrapper {}
+impl<'a> Eq for MovingWrapper<'a> {}
 
 
 /// Category of the Unit.

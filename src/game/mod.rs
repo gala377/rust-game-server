@@ -224,10 +224,12 @@ impl Game {
 
     // todo test, doc
     pub fn resolve_moves(&mut self) {
-        let mut unresolved = self.units_to_be_moved();
-        while unresolved.len() > 0 {
-            unresolved = self.make_move(unresolved);
-        };
+        {
+            let mut unresolved = self.units_to_be_moved();
+            while unresolved.len() > 0 {
+                unresolved = self.make_move(unresolved);
+            };
+        }
         self.resolve_blockades()
     }
 
@@ -239,7 +241,7 @@ impl Game {
             match u.state {
                 unit::State::Moving(..) | unit::State::Attack(..) => {
                     res.push(
-                        unit::MovingWrapper::new(u.id));
+                        unit::MovingWrapper::new(u));
                 }
                 _ => (),
             }
@@ -257,13 +259,12 @@ impl Game {
     }
 
     // todo test, doc
-    fn resolve_unit(&mut self, unit: &unit::MovingWrapper) {
+    fn resolve_unit(&mut self, wrapper: &unit::MovingWrapper) {
         // todo make a match case
-        let u_state = self.get_unit(unit.unit_id).unwrap().state;
-        match u_state {
+        match wrapper.unit.state {
             unit::State::Moving(x, y)  => {
                 if self.field_empty((x, y)) {
-                        let u = self.get_unit_mut(unit.unit_id).unwrap();
+                        let u = self.get_unit_mut(wrapper.unit.id).unwrap();
                 //      if x, y = unit.position change state to idle
                 //      if enemy unit in vision change state to idle
                 //      create new unit with updated moves made
