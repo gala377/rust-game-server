@@ -39,7 +39,7 @@ impl Game {
     }
 }
 
-impl Game {1
+impl Game {
     /// Adds new Unit to the game.
     /// Provides id, default stats and sets state to Idle.
     ///
@@ -688,12 +688,74 @@ mod tests {
 
     #[test]
     fn field_empty_returns_false_for_occupied_space() {
-                let mut g = Game::new(2, (100,100));
+        let mut g = Game::new(2, (100,100));
         g.add_unit(0, (1,1), unit::Category::Knight).unwrap();
         g.add_unit(0, (1,2), unit::Category::Knight).unwrap();
         g.add_unit(0, (1,3), unit::Category::Knight).unwrap();
         assert!(!g.field_empty((1,2)));
     }
 
+    #[test]
+    fn resolve_unit_returns_proper_new_moving_wrapper() {
+        let mut g = Game::new(2, (100,100));
+        g.add_unit(0, (1,1), unit::Category::Knight).unwrap();
+        g.move_unit(0, (3,3)).unwrap();
+        let mut wrap = unit::MovingWrapper::new(0);
+        wrap = g.resolve_unit(&wrap).unwrap();
+        assert!(wrap.moves_made == 1);
+        assert!(wrap.unit_id == 0);
+    }
 
+    #[test]
+    fn resolve_unit_moves_units_the_proper_way_in_straight_line_on_y() {
+        let mut g = Game::new(2, (100,100));
+        g.add_unit(0, (1,1), unit::Category::Knight).unwrap();
+        g.move_unit(0, (1,3)).unwrap();
+        let mut wrap = unit::MovingWrapper::new(0);
+        wrap = g.resolve_unit(&wrap).unwrap();
+        let u = g.get_unit(wrap.unit_id).unwrap();
+        assert!(u.position == (1, 2));
+    }
+
+    #[test]
+    fn resolve_unit_moves_units_the_proper_way_in_straight_line_on_x() {
+        let mut g = Game::new(2, (100,100));
+        g.add_unit(0, (1,1), unit::Category::Knight).unwrap();
+        g.move_unit(0, (3,1)).unwrap();
+        let mut wrap = unit::MovingWrapper::new(0);
+        wrap = g.resolve_unit(&wrap).unwrap();
+        let u = g.get_unit(wrap.unit_id).unwrap();
+        assert!(u.position == (2, 1));
+    }
+
+    #[test]
+    fn resolve_unit_moves_units_the_proper_way_diagonaly() {
+        let mut g = Game::new(2, (100,100));
+        g.add_unit(0, (1,1), unit::Category::Knight).unwrap();
+        g.move_unit(0, (3,3)).unwrap();
+        let mut wrap = unit::MovingWrapper::new(0);
+        wrap = g.resolve_unit(&wrap).unwrap();
+        let u = g.get_unit(wrap.unit_id).unwrap();
+        assert!(u.position == (2, 2));
+    }
+
+    #[test]
+    fn resolve_stops_unit_after_reaching_destination() {
+        let mut g = Game::new(2, (100,100));
+        g.add_unit(0, (1,1), unit::Category::Knight).unwrap();
+        g.move_unit(0, (2,2)).unwrap();
+        let wrap = unit::MovingWrapper::new(0);        
+        g.resolve_unit(&wrap);
+        let u = g.get_unit(0).unwrap();
+        assert_match!(u.state, unit::State::Idle);
+    }
+
+     #[test]
+    fn resolve_returns_none_after_reaching_destination() {
+        let mut g = Game::new(2, (100,100));
+        g.add_unit(0, (1,1), unit::Category::Knight).unwrap();
+        g.move_unit(0, (2,2)).unwrap();
+        let wrap = unit::MovingWrapper::new(0);
+        assert_match!(g.resolve_unit(&wrap), None);
+    }
 }

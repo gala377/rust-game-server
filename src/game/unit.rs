@@ -21,6 +21,7 @@ pub struct Unit {
 
 /// Wraps Unit during it's moving process
 /// and counts number of moves already made.
+#[derive(Debug)]
 pub struct MovingWrapper {
     pub moves_made: usize,
     pub unit_id: usize,
