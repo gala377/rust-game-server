@@ -259,21 +259,33 @@ impl Game {
     // todo test, doc
     fn resolve_unit(&mut self, unit: &unit::MovingWrapper) {
         // todo make a match case
-        let u = self.get_unit_mut(unit.unit_id).unwrap();
-        match u.state {
-            unit::State::Moving(x, y) => {
-                // if self.field_empty(x, y) {
-                //      move unit here
+        let u_state = self.get_unit(unit.unit_id).unwrap().state;
+        match u_state {
+            unit::State::Moving(x, y)  => {
+                if self.field_empty((x, y)) {
+                        let u = self.get_unit_mut(unit.unit_id).unwrap();
                 //      if x, y = unit.position change state to idle
                 //      if enemy unit in vision change state to idle
                 //      create new unit with updated moves made
                 //      return it
-                // }
+                }
             },
             unit::State::Attack(x, y) => {
             },
             _ => {},
         }
+    }
+
+    // todo test
+    /// Checks whether board field is not occupied by
+    /// any unit.
+    fn field_empty(&self, (x, y): (usize, usize)) -> bool {
+        for u in &self.units {
+            if u.position == (x, y) {
+                return false;
+            } 
+        }
+        true
     }
 
     // todo test, doc
