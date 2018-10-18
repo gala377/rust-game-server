@@ -1,5 +1,4 @@
 /// Defines Unit datatype and any related structs.
-
 use std::cmp::Ordering;
 
 /// Unit represents single soldier entity
@@ -54,7 +53,6 @@ impl PartialEq for MovingWrapper {
 }
 
 impl Eq for MovingWrapper {}
-
 
 /// Category of the Unit.
 /// As in Rock-Scissor-Paper each category

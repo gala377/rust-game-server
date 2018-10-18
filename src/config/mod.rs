@@ -1,6 +1,5 @@
 /// Module handles cofiguration files reading.
 /// And the internal config representation.
-
 extern crate toml;
 
 use std::error::Error;
@@ -8,11 +7,8 @@ use std::fmt;
 
 use super::helpers::file;
 
-
-
 /// Type Alias making return types more compact
 pub type ConfigResult<T> = Result<T, Box<Error>>;
-
 
 /// Game and server config taken from the config file.
 #[derive(Debug, Deserialize)]

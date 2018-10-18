@@ -1,10 +1,12 @@
 pub mod error;
+mod helpers;
 pub mod unit;
 
-use std::collections::HashSet;
 use std::collections::BinaryHeap;
+use std::collections::HashSet;
 
 use self::error::GameError;
+use self::helpers::Coords;
 use self::unit::Unit;
 
 /// Game represents current game state.
@@ -35,28 +37,6 @@ impl Game {
             units: Vec::new(),
         }
     }
-
-    /// Returns placeholder unit stats.
-    /// Possible extension in future release.
-    fn default_unit_stats() -> unit::Stats {
-        unit::Stats {
-            movement_range: 10,
-            vision_range: 10,
-            attack_range: 10,
-        }
-    }
-
-    /// Checks if requested move doesn't violate unit's stats.
-    /// todo the same for the Attack state.
-    fn assert_unit_move_within_reach(u: &Unit, (x, y): (usize, usize)) -> Result<(), GameError> {
-        let pos = &u.position;
-        let x_diff = (pos.0 as i32 - x as i32).abs() as usize;
-        let y_diff = (pos.1 as i32 - y as i32).abs() as usize;
-        if x_diff + y_diff > u.stats.movement_range {
-            return Err(GameError::MoveOutsideUnitsReach(x, y));
-        }
-        Ok(())
-    }
 }
 
 impl Game {
@@ -79,7 +59,7 @@ impl Game {
             owner_id,
             position,
             category,
-            stats: Game::default_unit_stats(),
+            stats: helpers::default_unit_stats(),
             state: unit::State::Idle,
         });
         self.num_of_units += 1;
@@ -91,7 +71,7 @@ impl Game {
 
     /// Checks if given position is inside the currents board boundaries.
     /// If true return Ok(()). PositionOutsideTheBoard otherwise.
-    fn assert_position_in_board(&self, (x, y): (usize, usize)) -> Result<(), GameError> {
+    fn assert_position_in_board(&self, (x, y): Coords) -> Result<(), GameError> {
         if (x, y) >= self.board_size {
             return Err(GameError::PositionOutsideTheBoard(x, y));
         }
@@ -169,10 +149,10 @@ impl Game {
 
     /// After movement assertions changes unit state
     /// to Moving at given postion.
-    pub fn move_unit(&mut self, unit_id: usize, (x, y): (usize, usize)) -> Result<(), GameError> {
+    pub fn move_unit(&mut self, unit_id: usize, (x, y): Coords) -> Result<(), GameError> {
         self.assert_position_in_board((x, y))?;
         let unit = self.get_unit_mut(unit_id)?;
-        Game::assert_unit_move_within_reach(&unit, (x, y))?;
+        helpers::assert_unit_move_within_reach(&unit, (x, y))?;
         unit.state = unit::State::Moving(x, y);
         Ok(())
     }
@@ -217,38 +197,42 @@ impl Game {
     ) -> Result<(), GameError> {
         self.assert_position_in_board((x, y))?;
         let unit = self.get_unit_mut(unit_id)?;
-        Game::assert_unit_move_within_reach(&unit, (x, y))?;
+        helpers::assert_unit_move_within_reach(&unit, (x, y))?;
         unit.state = unit::State::Attack(x, y);
         Ok(())
     }
 
-    // todo test, doc
+    // todo test
+    /// Takes all actions queued on units and executes them.
     pub fn resolve_moves(&mut self) {
         let mut unresolved = self.units_to_be_moved();
         while unresolved.len() > 0 {
             unresolved = self.make_move(unresolved);
-        };
+        }
         self.resolve_blockades()
     }
 
     // todo test
-    /// Returns vec of ids of the units that require movnig actions.
+    /// Returns queue of ids of the units that require moving actions.
     fn units_to_be_moved(&self) -> BinaryHeap<unit::MovingWrapper> {
-        let mut res = BinaryHeap::new();
-        for u in &self.units {
-            match u.state {
-                unit::State::Moving(..) | unit::State::Attack(..) => {
-                    res.push(
-                        unit::MovingWrapper::new(u.id));
-                }
-                _ => (),
-            }
-        }
-        res
+        self.units.iter()
+            .filter(
+                |&unit| {
+                    match unit.state {
+                        unit::State::Moving(..) | unit::State::Attack(..) => true,
+                        _ => false,
+                    }
+            }).map(|unit| unit::MovingWrapper::new(unit.id))
+            .collect()
     }
 
-    // todo test, doc
-    fn make_move(&mut self, mut units: BinaryHeap<unit::MovingWrapper>) -> BinaryHeap<unit::MovingWrapper> {
+    // todo test
+    /// Makes a single move for each unit in units argument.
+    /// Returns filtered queue. With units that still need to be moved.
+    fn make_move(
+        &mut self,
+        mut units: BinaryHeap<unit::MovingWrapper>,
+    ) -> BinaryHeap<unit::MovingWrapper> {
         let filtered = BinaryHeap::new();
         for u in units.drain() {
             self.resolve_unit(&u);
@@ -257,33 +241,53 @@ impl Game {
     }
 
     // todo test, doc
-    fn resolve_unit(&mut self, unit: &unit::MovingWrapper) {
-        // todo make a match case
-        let u_state = self.get_unit(unit.unit_id).unwrap().state;
-        match u_state {
-            unit::State::Moving(x, y)  => {
-                if self.field_empty((x, y)) {
-                        let u = self.get_unit_mut(unit.unit_id).unwrap();
-                //      if x, y = unit.position change state to idle
-                //      if enemy unit in vision change state to idle
-                //      create new unit with updated moves made
-                //      return it
+    fn resolve_unit(&mut self, wrapper: &unit::MovingWrapper) -> Option<unit::MovingWrapper> {
+        // Because of rusts weird pattern matching it has to be done that way
+        let (state, pos) = helpers::get_unis_moving_info(
+            self.get_unit(wrapper.unit_id).unwrap());
+
+        match state {
+            unit::State::Moving(x, y) => {
+                let next_pos = helpers::get_next_field_in_path(pos, (x, y));
+                if self.field_empty(next_pos) {
+                    let u = self.get_unit_mut(wrapper.unit_id).unwrap();
+                    u.position = next_pos;
+                    if u.position == (x, y) {
+                        u.state = unit::State::Idle;
+                        return None;
+                    }
+                    // todo if enemy unit in vision change state to idle
+                    return Some(unit::MovingWrapper{
+                        moves_made: wrapper.moves_made+1,
+                        unit_id: wrapper.unit_id,
+                    })
+                } else {
+                    // todo <- resolve it somehow (?)
+                    // but how do we resolve situations as
+                    //     a <- b
+                    //     v    ^
+                    //     c -> d
+                    // where we cant move any unit at all
+                    let u = self.get_unit_mut(wrapper.unit_id).unwrap();
+                    // for now let's just stop moving.
+                    // maybe later make max number of repetitions to resolve turn ?
+                    u.state = unit::State::Idle;
                 }
-            },
-            unit::State::Attack(x, y) => {
-            },
-            _ => {},
+            }
+            unit::State::Attack(x, y) => {}
+            _ => {}
         }
+        None
     }
 
     // todo test
     /// Checks whether board field is not occupied by
     /// any unit.
-    fn field_empty(&self, (x, y): (usize, usize)) -> bool {
+    fn field_empty(&self, (x, y): Coords) -> bool {
         for u in &self.units {
             if u.position == (x, y) {
                 return false;
-            } 
+            }
         }
         true
     }
@@ -607,7 +611,10 @@ mod tests {
         let mut g = Game::new(2, (100, 100));
         g.add_unit(0, (0, 0), unit::Category::Knight).unwrap();
         g.add_unit(1, (99, 99), unit::Category::Knight).unwrap();
-        assert_match!(g.battle_units(0, 1), Err(GameError::MoveOutsideUnitsReach(49, 49)));
+        assert_match!(
+            g.battle_units(0, 1),
+            Err(GameError::MoveOutsideUnitsReach(49, 49))
+        );
         assert_match!(
             g.get_unit(0).unwrap(),
             Unit {
@@ -627,4 +634,4 @@ mod tests {
                 ..
             });
     }
-}   
+}
