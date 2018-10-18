@@ -39,7 +39,7 @@ impl Game {
     }
 }
 
-impl Game {
+impl Game {1
     /// Adds new Unit to the game.
     /// Provides id, default stats and sets state to Idle.
     ///
@@ -89,12 +89,10 @@ impl Game {
 
     /// The same as get_unit but the reference is mutable.
     fn get_unit_mut(&mut self, unit_id: usize) -> Result<&mut Unit, GameError> {
-        for u in &mut self.units {
-            if u.id == unit_id {
-                return Ok(u);
-            }
+        match self.units.iter_mut().find(|unit| unit.id == unit_id) {
+            Some(val) => Ok(val),
+            None => Err(GameError::NonExistingUnit(unit_id)),
         }
-        Err(GameError::NonExistingUnit(unit_id))
     }
 
     /// Returns vec of references to the units with id's specified
@@ -210,7 +208,6 @@ impl Game {
         self.resolve_blockades()
     }
 
-    // todo test
     /// Returns queue of ids of the units that require moving actions.
     fn units_to_be_moved(&self) -> BinaryHeap<unit::MovingWrapper> {
         self.units.iter()
@@ -231,14 +228,18 @@ impl Game {
         &mut self,
         mut units: BinaryHeap<unit::MovingWrapper>,
     ) -> BinaryHeap<unit::MovingWrapper> {
-        let filtered = BinaryHeap::new();
+        let mut filtered = BinaryHeap::new();
         for u in units.drain() {
-            self.resolve_unit(&u);
+            if let Some(val) = self.resolve_unit(&u) {
+                filtered.push(val);
+            }
         }
         filtered
     }
 
-    // todo test, doc
+    /// Moves unit to it's next position and returns its updated MovingWrapper.
+    /// If the move was completed or the unit entered a blockade resolve_unit
+    /// changes units state approprietly.
     fn resolve_unit(&mut self, wrapper: &unit::MovingWrapper) -> Option<unit::MovingWrapper> {
         // Because of rusts weird pattern matching it has to be done that way
         let (state, pos) = helpers::get_unis_moving_info(
@@ -272,13 +273,14 @@ impl Game {
                     u.state = unit::State::Idle;
                 }
             }
-            unit::State::Attack(x, y) => {}
+            unit::State::Attack(x, y) => {
+                // todo implement
+            }
             _ => {}
-        }
+        };
         None
     }
 
-    // todo test
     /// Checks whether board field is not occupied by
     /// any unit.
     fn field_empty(&self, (x, y): Coords) -> bool {
@@ -299,7 +301,7 @@ impl Game {
     /// If the game os over returns Ok with the id of the
     /// player who won. None otherwise.
     pub fn game_over(&self) -> Option<usize> {
-        // todo body
+        // todo implement
         None
     }
 }
@@ -633,4 +635,65 @@ mod tests {
                 ..
             });
     }
+
+    #[test]
+    fn empty_heap_when_no_units_should_move() {
+        let mut g = Game::new(2, (100, 100));
+        g.add_unit(0, (1,1), unit::Category::Knight).unwrap();
+        g.add_unit(0, (1,2), unit::Category::Knight).unwrap();
+        g.add_unit(0, (1,3), unit::Category::Knight).unwrap();
+        assert!( g.units_to_be_moved().len() == 0);
+    }
+
+    #[test]
+    fn moving_units_are_considered_as_the_one_to_move() {
+        let mut g = Game::new(2, (100,100));
+        g.add_unit(0, (1,1), unit::Category::Knight).unwrap();
+        g.add_unit(0, (1,2), unit::Category::Knight).unwrap();
+        g.add_unit(0, (1,3), unit::Category::Knight).unwrap();
+        g.move_unit(0, (4,4)).unwrap();
+        g.move_unit(2, (5,5)).unwrap();
+        let mut res = g.units_to_be_moved();
+        assert!(res.len() == 2);
+        let u = res.pop().unwrap();
+        assert!(u.unit_id == 0 || u.unit_id == 2);
+        let u = res.pop().unwrap();
+        assert!(u.unit_id == 0 || u.unit_id == 2);
+    }
+
+    #[test]
+    fn attacking_units_are_considered_as_the_one_to_move() {
+        let mut g = Game::new(2, (100,100));
+        g.add_unit(0, (1,1), unit::Category::Knight).unwrap();
+        g.add_unit(0, (1,2), unit::Category::Knight).unwrap();
+        g.add_unit(0, (1,3), unit::Category::Knight).unwrap();
+        g.attack_position(1, (5,5)).unwrap();
+        g.attack_position(2, (3,3)).unwrap();
+        let mut res = g.units_to_be_moved();
+        assert!(res.len() == 2);
+        let u = res.pop().unwrap();
+        assert!(u.unit_id == 1 || u.unit_id == 2);
+        let u = res.pop().unwrap();
+        assert!(u.unit_id == 1 || u.unit_id == 2);
+    }
+
+    #[test]
+    fn field_empty_returns_true_for_empty_field() {
+                let mut g = Game::new(2, (100,100));
+        g.add_unit(0, (1,1), unit::Category::Knight).unwrap();
+        g.add_unit(0, (1,2), unit::Category::Knight).unwrap();
+        g.add_unit(0, (1,3), unit::Category::Knight).unwrap();
+        assert!(g.field_empty((2,2)));
+    }
+
+    #[test]
+    fn field_empty_returns_false_for_occupied_space() {
+                let mut g = Game::new(2, (100,100));
+        g.add_unit(0, (1,1), unit::Category::Knight).unwrap();
+        g.add_unit(0, (1,2), unit::Category::Knight).unwrap();
+        g.add_unit(0, (1,3), unit::Category::Knight).unwrap();
+        assert!(!g.field_empty((1,2)));
+    }
+
+
 }
