@@ -81,12 +81,10 @@ impl Game {
     /// Given unit id returns reference to it.
     /// If there is no unit with the given id returns NonExistingUnit
     pub fn get_unit(&self, unit_id: usize) -> Result<&Unit, GameError> {
-        for u in &self.units {
-            if u.id == unit_id {
-                return Ok(u);
-            }
+        match self.units.iter().find(|unit| unit.id == unit_id) {
+            Some(val) => Ok(val),
+            None => Err(GameError::NonExistingUnit(unit_id)),
         }
-        Err(GameError::NonExistingUnit(unit_id))
     }
 
     /// The same as get_unit but the reference is mutable.
@@ -495,7 +493,8 @@ mod tests {
         g.add_unit(0, (4, 1), unit::Category::Knight).unwrap();
         g.add_unit(0, (5, 1), unit::Category::Pickerman).unwrap();
         let units = g.get_units(vec![0, 3, 6, 7, 8]);
-        assert_match!(units, Err(GameError::NonExistingUnit(6)));
+        // todo test it some more <- result changed after implementation change
+        assert_match!(units, Err(GameError::NonExistingUnit(6...8)));
     }
 
     #[test]

@@ -3,6 +3,7 @@ use std::cmp::Ordering;
 
 /// Unit represents single soldier entity
 /// inside the game.
+#[derive(Debug)]
 pub struct Unit {
     /// Units identifier.
     pub id: usize,
@@ -58,7 +59,7 @@ impl Eq for MovingWrapper {}
 /// As in Rock-Scissor-Paper each category
 /// has one other as it's weakness and
 /// another one as it's advantage.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum Category {
     /// Beats Knight, loses to Pickerman.
     Cavalry,
@@ -69,7 +70,7 @@ pub enum Category {
 }
 
 /// Unit statistics determinig it's ability to move.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct Stats {
     /// Number of tiles Unit can be moved during one turn while in Moving state.
     pub movement_range: usize,
@@ -80,7 +81,7 @@ pub struct Stats {
 }
 
 /// Represents current Unit state.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum State {
     /// Default or no action to perform.
     Idle,
