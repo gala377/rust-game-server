@@ -25,3 +25,9 @@ toml = "0.4"
 
 # for some testing 
 tempfile = "3"
+
+# for message deserialization
+byteorder = "1"
+
+# check how to use or delete
+log = { version = "0.4", features = ["release_max_level_info"]}
