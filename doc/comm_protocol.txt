@@ -1,0 +1,48 @@
+
+This document desribes method of communicating with the game server.
+
+message format:
+	
+	| 0 | 1 | 2 | 3 | 4 | 5 | 6 |  ...  |127|
+	| skey  |    mess id    |  mess payload |
+
+	Where skey is: 
+
+	byte  |       0       |       1       |
+	bit   |0|1|2|3|4|5|6|7|0|1|2|3|4|5|6|7|
+    val   |0|1|0|1|0|0|1|0|0|1|0|0|0|1|1|1|
+	ascii |       R       |       G       |
+
+
+
+	And message id and its payload can be read from the list below:
+	
+Messages:
+
+	Mess:		Hello
+	Id:			0
+    Payload:	None 
+	Desc:		First message to send to init connection
+	Response:	0|1  
+
+
+
+
+Responses:
+
+	Mess:		Error
+	Id:			0
+	Payload:	|    0...3   |     4...7     |  8...121  |
+				| error code | error msg len | error msg |
+	Desc:		Returned on failure. 
+	
+________________________________________________________________________________
+
+	Mess:		Welcome
+	Id:			1 
+	Payload:	None
+	Desc:		Connection established 
+
+
+
+
