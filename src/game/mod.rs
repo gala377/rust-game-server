@@ -1,3 +1,5 @@
+// All of this module is considered WIP
+
 pub mod error;
 mod helpers;
 pub mod unit;
@@ -273,7 +275,7 @@ impl Game {
                     u.state = unit::State::Idle;
                 }
             }
-            unit::State::Attack(x, y) => {
+            unit::State::Attack(_x, _y) => {
                 // todo implement
             }
             _ => {}

@@ -1,9 +1,7 @@
-use std::error::Error;
-
-
 pub struct ReadError;
 
 // todo implement
+// todo more error
 // impl Error for ReadError {
 
 //     fn description() -> &'static str {

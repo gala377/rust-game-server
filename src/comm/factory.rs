@@ -1,42 +1,37 @@
-
 use std::collections::HashMap;
-use std::any::Any;
 
 use super::errors::ReadError;
+use super::{
+    Request,
+    RequestRaw,
+    RequestId,
+};
 
 use byteorder::{ByteOrder, LittleEndian};
 
-// Traits
 
-/// Denotes general request
-/// interface which can be send to the game server.
-pub trait Request {
+// Types
 
-    fn id(&self) -> u32;
-    fn as_any(&self) -> &dyn Any;
-    fn as_any_mut(&mut self) -> &mut dyn Any;
-}
+// todo change Option to Result and write custom errors
+// so we can send error response back.
+/// Trait aliasing request builder function.
+/// Builder function should create struct of type implementing Request
+/// trait from raw data (being array of bytes).
+/// None should be returned if reading was not possible.  
+pub trait RequestBuilder: Fn(RequestRaw) -> Option<Box<dyn Request>> {}
+impl<T> RequestBuilder for T where T: Fn(RequestRaw) -> Option<Box<dyn Request>> {}
 
-// Type aliases for context
-
-/// Raw data for the request factory to
-/// crete the request from.
-pub type RequestRaw = [u8; 512];
-
-// Aliases builder function
-pub trait RequestBuilder: Fn(RequestRaw) -> Option<Box<Request>> {}
-impl<T> RequestBuilder for T where T: Fn(RequestRaw) -> Option<Box<Request>> {}
+/// Boxed RequestBuilder alias for shorter method signatures.
+pub type BoxedReqBuilder = Box<dyn RequestBuilder<Output=Option<Box<dyn Request>>>>;
 
 
-/// Boxed RequestBuilder alias for shorter method signatures
-
-pub type BoxedReqBuilder = Box<dyn RequestBuilder<Output=Option<Box<Request>>>>;
 // Factory definition and declaration
 
-/// Request factory returns Request object
+/// Request factory returns Request trait object
 /// from provided raw data.
 pub struct RequestFactory {
-    req_builders: HashMap<u32, BoxedReqBuilder>,
+    /// Maps request id to function creating it from raw bytes. 
+    req_builders: HashMap<RequestId, BoxedReqBuilder>,
 }
 
 impl RequestFactory {
@@ -47,8 +42,7 @@ impl RequestFactory {
             req_builders: HashMap::new(),
         }
     }
-
-    // todo change to Result
+    
     // todo implement
     /// Creates Request trait object from raw bytes data.
     /// Error if data was illformed or the builder function was not specified
@@ -69,7 +63,7 @@ impl RequestFactory {
     /// Reads message id from the raw request.
     /// Note that the request needs to be valid in the first
     /// 6 bytes if it isn't this function panics.
-    fn read_id(raw: &RequestRaw) -> u32 {
+    fn read_id(raw: &RequestRaw) -> RequestId {
         LittleEndian::read_u32(&raw[2..6])
     }
 
@@ -80,7 +74,7 @@ impl RequestFactory {
     /// Returns true if method was registered, false otherwise.
     /// Note that the only case that the false is returned is when
     /// there already exists builder on specified id.
-    pub fn register(&mut self, id: u32, builder: BoxedReqBuilder) -> bool {
+    pub fn register(&mut self, id: RequestId, builder: BoxedReqBuilder) -> bool {
         if self.req_builders.contains_key(&id) {
             false 
         } else {
@@ -92,7 +86,8 @@ impl RequestFactory {
     // todo change to Result<(), OverrideError>
     /// Overrides existing builder. Returns true on success and false if 
     /// there is no builder already registered for the given id.
-    pub fn overregister(&mut self, id: u32, builder: BoxedReqBuilder) -> bool {
+    #[allow(dead_code)]
+    pub fn overregister(&mut self, id: RequestId, builder: BoxedReqBuilder) -> bool {
         if self.req_builders.contains_key(&id) {
             self.req_builders.insert(id, builder);
             true
@@ -102,7 +97,8 @@ impl RequestFactory {
     }
 
     /// Registers builder if none exists. Overregisters otherwise.
-    pub fn force_register(&mut self, id: u32, builder: BoxedReqBuilder) {
+    #[allow(dead_code)]
+    pub fn force_register(&mut self, id: RequestId, builder: BoxedReqBuilder) {
         if self.req_builders.contains_key(&id) {
             self.overregister(id, builder);
         } else {
