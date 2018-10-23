@@ -1,17 +1,30 @@
+
+macro_rules! req_builder {
+    ($func:block) => {
+        Box::new(|raw: RequestRaw| $func)
+    };
+}
+
 pub mod hello {
 
     use std::any::Any;
 
-    use super::super::Request;
-
-
+    use super::super::{
+        Request,
+        RequestRaw,
+        RequestId,
+    };
+    use super::super::factory::{
+        Registerable,
+        BoxedReqBuilder,
+    };
     // Types
 
     pub struct Req;
 
     impl Request for Req {
 
-        fn id(&self) -> u32 {
+        fn id(&self) -> RequestId {
             0
         }
 
@@ -23,5 +36,18 @@ pub mod hello {
             self
         }
 
+    }
+
+    impl Registerable for Req {
+
+        fn id() -> RequestId {
+            0
+        }
+
+        fn builder() -> BoxedReqBuilder {
+            req_builder!({
+                Some(Box::new(Req{})) 
+            })
+        }
     }
 }

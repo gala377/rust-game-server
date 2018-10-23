@@ -10,6 +10,15 @@ use super::{
 use byteorder::{ByteOrder, LittleEndian};
 
 
+// Traits
+
+/// Allows for usage of register! macro in factory_init
+/// on request module name.
+pub trait Registerable {
+    fn id() -> RequestId;
+    fn builder() -> BoxedReqBuilder;
+}
+
 // Types
 
 // todo change Option to Result and write custom errors

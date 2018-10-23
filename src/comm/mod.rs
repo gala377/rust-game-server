@@ -11,7 +11,7 @@ mod factory;
 mod requests;
 mod errors;
 mod helpers;
-
+mod factory_init;
 
 // Traits
 
@@ -99,26 +99,7 @@ impl Server {
         Server{
             config,
             listener,
-            req_factory: Server::init_req_factory(),
-        }
-    }
-
-    // todo <- better method of registering requests.
-    // maybe request having to implement
-    // fn builder_fn() -> factory::BoxedReqBuilder ?
-    /// Creates new request factory.
-    /// Registers request builder functions.
-    fn init_req_factory() -> factory::RequestFactory {
-        let mut f = factory::RequestFactory::new();
-        
-        // todo is it possible (macro maybe?) for requests
-        // to register themselves.
-        if f.register(0, Box::new(|_raw: RequestRaw| {
-            Some(Box::new(requests::hello::Req{}))
-        })) {
-            f
-        } else {
-            panic!("Could not register hello builder function");
+            req_factory: factory_init::init(),
         }
     }
 
