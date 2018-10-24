@@ -3,8 +3,8 @@ This document desribes method of communicating with the game server.
 
 message format:
 	
-	| 0 | 1 | 2 | 3 | 4 | 5 | 6 |  ...  |127|
-	| skey  |    mess id    |  mess payload |
+	| 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10...MAX_MSG_LEN |
+	| skey  |    mess id    |  payload len  |   mess payload   |
 
 	Where skey is: 
 
@@ -32,8 +32,8 @@ Responses:
 
 	Mess:		Error
 	Id:			0
-	Payload:	|    0...3   |     4...7     |  8...121  |
-				| error code | error msg len | error msg |
+	Payload:	|    0...3   |    4...   |
+				| error code | error msg |
 	Desc:		Returned on failure. 
 	
 ________________________________________________________________________________

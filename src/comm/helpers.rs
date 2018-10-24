@@ -6,9 +6,8 @@ pub mod cast {
 
     use super::super::Request;
 
-
     /// Returns Some(val) where val is mutable reference to the underlying struct
-    /// of the provided Request trait object. 
+    /// of the provided Request trait object.
     /// None if cast was unsuccessful.
     #[allow(dead_code)]
     pub fn as_mut_ref<T: Any>(obj: &mut Box<dyn Request>) -> Option<&mut T> {
@@ -16,19 +15,19 @@ pub mod cast {
     }
 
     /// Returns Some(val) where val is reference to the underlying struct
-    /// of the provided Request trait object. 
+    /// of the provided Request trait object.
     /// None if cast was unsuccessful.
     pub fn as_ref<T: Any>(obj: &Box<dyn Request>) -> Option<&T> {
         obj.as_any().downcast_ref::<T>()
     }
 }
 
-// todo 
+// todo
 // pub fn ResponseBuilderWrapper<T>(
 //     builder: Box<dyn Fn(T) -> Box<Response>>) -> BoxedRespBuilder {
 //
 //    return  move |raw: Box<dyn Request>| {
 //          let casted = Cast<T>::as_ref();
-//          builder(casted) 
+//          builder(casted)
 //    }
 // }

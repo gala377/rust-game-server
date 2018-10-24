@@ -8,3 +8,11 @@
 // If he wants to communicate he needs to send his <name:identifier> base64 encoded
 // This way he knows which unit's are whose player (by their owners name) but
 // cannot send request in their name
+
+
+
+
+For now
+    Implement request handlind and writing response.
+
+    Implement msg request payload on vector.

@@ -1,14 +1,9 @@
 use std::collections::HashMap;
 
 use super::errors::ReadError;
-use super::{
-    Request,
-    RequestRaw,
-    RequestId,
-};
+use super::{Request, RequestId, RequestRaw, SKEY};
 
 use byteorder::{ByteOrder, LittleEndian};
-
 
 // Traits
 
@@ -31,27 +26,25 @@ pub trait RequestBuilder: Fn(RequestRaw) -> Option<Box<dyn Request>> {}
 impl<T> RequestBuilder for T where T: Fn(RequestRaw) -> Option<Box<dyn Request>> {}
 
 /// Boxed RequestBuilder alias for shorter method signatures.
-pub type BoxedReqBuilder = Box<dyn RequestBuilder<Output=Option<Box<dyn Request>>>>;
-
+pub type BoxedReqBuilder = Box<dyn RequestBuilder<Output = Option<Box<dyn Request>>>>;
 
 // Factory definition and declaration
 
 /// Request factory returns Request trait object
 /// from provided raw data.
 pub struct RequestFactory {
-    /// Maps request id to function creating it from raw bytes. 
+    /// Maps request id to function creating it from raw bytes.
     req_builders: HashMap<RequestId, BoxedReqBuilder>,
 }
 
 impl RequestFactory {
-
     /// Creates new RequestFactory
     pub fn new() -> RequestFactory {
         RequestFactory {
             req_builders: HashMap::new(),
         }
     }
-    
+
     // todo implement
     /// Creates Request trait object from raw bytes data.
     /// Error if data was illformed or the builder function was not specified
@@ -59,7 +52,7 @@ impl RequestFactory {
     pub fn from_raw(&self, raw: RequestRaw) -> Result<Box<Request>, ReadError> {
         let id = Self::read_id(&raw);
         match self.req_builders.get(&id) {
-            None => Err(ReadError{}),
+            None => Err(ReadError {}),
             Some(builder) => {
                 return match builder(raw) {
                     None => Err(ReadError),
@@ -73,27 +66,27 @@ impl RequestFactory {
     /// Note that the request needs to be valid in the first
     /// 6 bytes if it isn't this function panics.
     fn read_id(raw: &RequestRaw) -> RequestId {
-        LittleEndian::read_u32(&raw[2..6])
+        LittleEndian::read_u32(&raw[SKEY.len()..SKEY.len()+4])
     }
 
     // todo change to Result<(), RegisterError>
     /// Registers the builder function to the specified mess id.
     /// Doesn't allow to overwrite already existing builder.
-    /// 
+    ///
     /// Returns true if method was registered, false otherwise.
     /// Note that the only case that the false is returned is when
     /// there already exists builder on specified id.
     pub fn register(&mut self, id: RequestId, builder: BoxedReqBuilder) -> bool {
         if self.req_builders.contains_key(&id) {
-            false 
+            false
         } else {
             self.req_builders.insert(id, builder);
             true
-        } 
+        }
     }
 
     // todo change to Result<(), OverrideError>
-    /// Overrides existing builder. Returns true on success and false if 
+    /// Overrides existing builder. Returns true on success and false if
     /// there is no builder already registered for the given id.
     #[allow(dead_code)]
     pub fn overregister(&mut self, id: RequestId, builder: BoxedReqBuilder) -> bool {
@@ -112,6 +105,6 @@ impl RequestFactory {
             self.overregister(id, builder);
         } else {
             self.register(id, builder);
-        } 
+        }
     }
 }

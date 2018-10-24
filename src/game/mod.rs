@@ -20,6 +20,7 @@ pub struct Game {
     num_of_units: usize,
     /// Boundaries of the game board.
     board_size: (usize, usize),
+    //todo Rewrite to generiational index. RustConf ECS
     /// Units currently in play (active).
     units: Vec<Unit>,
 }
@@ -212,14 +213,13 @@ impl Game {
 
     /// Returns queue of ids of the units that require moving actions.
     fn units_to_be_moved(&self) -> BinaryHeap<unit::MovingWrapper> {
-        self.units.iter()
-            .filter(
-                |&unit| {
-                    match unit.state {
-                        unit::State::Moving(..) | unit::State::Attack(..) => true,
-                        _ => false,
-                    }
-            }).map(|unit| unit::MovingWrapper::new(unit.id))
+        self.units
+            .iter()
+            .filter(|&unit| match unit.state {
+                unit::State::Moving(..) | unit::State::Attack(..) => true,
+                _ => false,
+            })
+            .map(|unit| unit::MovingWrapper::new(unit.id))
             .collect()
     }
 
@@ -244,8 +244,7 @@ impl Game {
     /// changes units state approprietly.
     fn resolve_unit(&mut self, wrapper: &unit::MovingWrapper) -> Option<unit::MovingWrapper> {
         // Because of rusts weird pattern matching it has to be done that way
-        let (state, pos) = helpers::get_unis_moving_info(
-            self.get_unit(wrapper.unit_id).unwrap());
+        let (state, pos) = helpers::get_unis_moving_info(self.get_unit(wrapper.unit_id).unwrap());
 
         match state {
             unit::State::Moving(x, y) => {
@@ -258,10 +257,10 @@ impl Game {
                         return None;
                     }
                     // todo if enemy unit in vision change state to idle
-                    return Some(unit::MovingWrapper{
-                        moves_made: wrapper.moves_made+1,
+                    return Some(unit::MovingWrapper {
+                        moves_made: wrapper.moves_made + 1,
                         unit_id: wrapper.unit_id,
-                    })
+                    });
                 } else {
                     // todo <- resolve it somehow (?)
                     // but how do we resolve situations as
@@ -324,6 +323,7 @@ mod tests {
         }
     }
 
+    #[allow(dead_code)]
     macro_rules! assert_match_debug {
         ($e:expr, $( $p:pat )+) => {
             assert!(match $e {
@@ -641,20 +641,20 @@ mod tests {
     #[test]
     fn empty_heap_when_no_units_should_move() {
         let mut g = Game::new(2, (100, 100));
-        g.add_unit(0, (1,1), unit::Category::Knight).unwrap();
-        g.add_unit(0, (1,2), unit::Category::Knight).unwrap();
-        g.add_unit(0, (1,3), unit::Category::Knight).unwrap();
-        assert!( g.units_to_be_moved().len() == 0);
+        g.add_unit(0, (1, 1), unit::Category::Knight).unwrap();
+        g.add_unit(0, (1, 2), unit::Category::Knight).unwrap();
+        g.add_unit(0, (1, 3), unit::Category::Knight).unwrap();
+        assert!(g.units_to_be_moved().len() == 0);
     }
 
     #[test]
     fn moving_units_are_considered_as_the_one_to_move() {
-        let mut g = Game::new(2, (100,100));
-        g.add_unit(0, (1,1), unit::Category::Knight).unwrap();
-        g.add_unit(0, (1,2), unit::Category::Knight).unwrap();
-        g.add_unit(0, (1,3), unit::Category::Knight).unwrap();
-        g.move_unit(0, (4,4)).unwrap();
-        g.move_unit(2, (5,5)).unwrap();
+        let mut g = Game::new(2, (100, 100));
+        g.add_unit(0, (1, 1), unit::Category::Knight).unwrap();
+        g.add_unit(0, (1, 2), unit::Category::Knight).unwrap();
+        g.add_unit(0, (1, 3), unit::Category::Knight).unwrap();
+        g.move_unit(0, (4, 4)).unwrap();
+        g.move_unit(2, (5, 5)).unwrap();
         let mut res = g.units_to_be_moved();
         assert!(res.len() == 2);
         let u = res.pop().unwrap();
@@ -665,12 +665,12 @@ mod tests {
 
     #[test]
     fn attacking_units_are_considered_as_the_one_to_move() {
-        let mut g = Game::new(2, (100,100));
-        g.add_unit(0, (1,1), unit::Category::Knight).unwrap();
-        g.add_unit(0, (1,2), unit::Category::Knight).unwrap();
-        g.add_unit(0, (1,3), unit::Category::Knight).unwrap();
-        g.attack_position(1, (5,5)).unwrap();
-        g.attack_position(2, (3,3)).unwrap();
+        let mut g = Game::new(2, (100, 100));
+        g.add_unit(0, (1, 1), unit::Category::Knight).unwrap();
+        g.add_unit(0, (1, 2), unit::Category::Knight).unwrap();
+        g.add_unit(0, (1, 3), unit::Category::Knight).unwrap();
+        g.attack_position(1, (5, 5)).unwrap();
+        g.attack_position(2, (3, 3)).unwrap();
         let mut res = g.units_to_be_moved();
         assert!(res.len() == 2);
         let u = res.pop().unwrap();
@@ -681,27 +681,27 @@ mod tests {
 
     #[test]
     fn field_empty_returns_true_for_empty_field() {
-                let mut g = Game::new(2, (100,100));
-        g.add_unit(0, (1,1), unit::Category::Knight).unwrap();
-        g.add_unit(0, (1,2), unit::Category::Knight).unwrap();
-        g.add_unit(0, (1,3), unit::Category::Knight).unwrap();
-        assert!(g.field_empty((2,2)));
+        let mut g = Game::new(2, (100, 100));
+        g.add_unit(0, (1, 1), unit::Category::Knight).unwrap();
+        g.add_unit(0, (1, 2), unit::Category::Knight).unwrap();
+        g.add_unit(0, (1, 3), unit::Category::Knight).unwrap();
+        assert!(g.field_empty((2, 2)));
     }
 
     #[test]
     fn field_empty_returns_false_for_occupied_space() {
-        let mut g = Game::new(2, (100,100));
-        g.add_unit(0, (1,1), unit::Category::Knight).unwrap();
-        g.add_unit(0, (1,2), unit::Category::Knight).unwrap();
-        g.add_unit(0, (1,3), unit::Category::Knight).unwrap();
-        assert!(!g.field_empty((1,2)));
+        let mut g = Game::new(2, (100, 100));
+        g.add_unit(0, (1, 1), unit::Category::Knight).unwrap();
+        g.add_unit(0, (1, 2), unit::Category::Knight).unwrap();
+        g.add_unit(0, (1, 3), unit::Category::Knight).unwrap();
+        assert!(!g.field_empty((1, 2)));
     }
 
     #[test]
     fn resolve_unit_returns_proper_new_moving_wrapper() {
-        let mut g = Game::new(2, (100,100));
-        g.add_unit(0, (1,1), unit::Category::Knight).unwrap();
-        g.move_unit(0, (3,3)).unwrap();
+        let mut g = Game::new(2, (100, 100));
+        g.add_unit(0, (1, 1), unit::Category::Knight).unwrap();
+        g.move_unit(0, (3, 3)).unwrap();
         let mut wrap = unit::MovingWrapper::new(0);
         wrap = g.resolve_unit(&wrap).unwrap();
         assert!(wrap.moves_made == 1);
@@ -710,9 +710,9 @@ mod tests {
 
     #[test]
     fn resolve_unit_moves_units_the_proper_way_in_straight_line_on_y() {
-        let mut g = Game::new(2, (100,100));
-        g.add_unit(0, (1,1), unit::Category::Knight).unwrap();
-        g.move_unit(0, (1,3)).unwrap();
+        let mut g = Game::new(2, (100, 100));
+        g.add_unit(0, (1, 1), unit::Category::Knight).unwrap();
+        g.move_unit(0, (1, 3)).unwrap();
         let mut wrap = unit::MovingWrapper::new(0);
         wrap = g.resolve_unit(&wrap).unwrap();
         let u = g.get_unit(wrap.unit_id).unwrap();
@@ -721,9 +721,9 @@ mod tests {
 
     #[test]
     fn resolve_unit_moves_units_the_proper_way_in_straight_line_on_x() {
-        let mut g = Game::new(2, (100,100));
-        g.add_unit(0, (1,1), unit::Category::Knight).unwrap();
-        g.move_unit(0, (3,1)).unwrap();
+        let mut g = Game::new(2, (100, 100));
+        g.add_unit(0, (1, 1), unit::Category::Knight).unwrap();
+        g.move_unit(0, (3, 1)).unwrap();
         let mut wrap = unit::MovingWrapper::new(0);
         wrap = g.resolve_unit(&wrap).unwrap();
         let u = g.get_unit(wrap.unit_id).unwrap();
@@ -732,9 +732,9 @@ mod tests {
 
     #[test]
     fn resolve_unit_moves_units_the_proper_way_diagonaly() {
-        let mut g = Game::new(2, (100,100));
-        g.add_unit(0, (1,1), unit::Category::Knight).unwrap();
-        g.move_unit(0, (3,3)).unwrap();
+        let mut g = Game::new(2, (100, 100));
+        g.add_unit(0, (1, 1), unit::Category::Knight).unwrap();
+        g.move_unit(0, (3, 3)).unwrap();
         let mut wrap = unit::MovingWrapper::new(0);
         wrap = g.resolve_unit(&wrap).unwrap();
         let u = g.get_unit(wrap.unit_id).unwrap();
@@ -743,20 +743,20 @@ mod tests {
 
     #[test]
     fn resolve_stops_unit_after_reaching_destination() {
-        let mut g = Game::new(2, (100,100));
-        g.add_unit(0, (1,1), unit::Category::Knight).unwrap();
-        g.move_unit(0, (2,2)).unwrap();
-        let wrap = unit::MovingWrapper::new(0);        
+        let mut g = Game::new(2, (100, 100));
+        g.add_unit(0, (1, 1), unit::Category::Knight).unwrap();
+        g.move_unit(0, (2, 2)).unwrap();
+        let wrap = unit::MovingWrapper::new(0);
         g.resolve_unit(&wrap);
         let u = g.get_unit(0).unwrap();
         assert_match!(u.state, unit::State::Idle);
     }
 
-     #[test]
+    #[test]
     fn resolve_returns_none_after_reaching_destination() {
-        let mut g = Game::new(2, (100,100));
-        g.add_unit(0, (1,1), unit::Category::Knight).unwrap();
-        g.move_unit(0, (2,2)).unwrap();
+        let mut g = Game::new(2, (100, 100));
+        g.add_unit(0, (1, 1), unit::Category::Knight).unwrap();
+        g.move_unit(0, (2, 2)).unwrap();
         let wrap = unit::MovingWrapper::new(0);
         assert_match!(g.resolve_unit(&wrap), None);
     }

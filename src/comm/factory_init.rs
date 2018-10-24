@@ -1,16 +1,5 @@
-
-use super::{
-    Server,
-    RequestId,
-    RequestRaw,    
-};
-use super::factory::{
-    RequestFactory,
-    RequestBuilder,
-    Registerable,
-};
+use super::factory::{Registerable, RequestFactory};
 use super::requests;
-
 
 macro_rules! register {
     ($f:ident, $id:expr, $func:block, $msg:expr) => {
@@ -20,20 +9,20 @@ macro_rules! register {
     };
 
     ($f:ident, $req:ident) => {
-        if !$f.register(
-            requests::$req::Req::id(),
-            requests::$req::Req::builder()
-        ) {
-            panic!(concat!("could not register ", stringify!($req), " builder function"));
+        if !$f.register(requests::$req::Req::id(), requests::$req::Req::builder()) {
+            panic!(concat!(
+                "could not register ",
+                stringify!($req),
+                " builder function"
+            ));
         }
     };
 }
 
-
-/// Returns RequestFactory struct with 
+/// Returns RequestFactory struct with
 /// all the factory functions registered.
 pub fn init() -> RequestFactory {
-    let mut f = RequestFactory::new(); 
+    let mut f = RequestFactory::new();
 
     register!(f, hello);
 

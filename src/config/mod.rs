@@ -80,7 +80,8 @@ mod tests {
             r#"[server]
         address = "10.0.0.1"
         port = 6543"#,
-        ).unwrap();
+        )
+        .unwrap();
         let config = Config::from_file(file.path().to_str().unwrap()).unwrap();
         assert_eq!(config.server.address, "10.0.0.1");
         assert_eq!(config.server.port, 6543);
@@ -92,7 +93,8 @@ mod tests {
             r#"[server]
         address = "10.0.0.1"
         port = 6543"#,
-        ).unwrap();
+        )
+        .unwrap();
         let config = ServerConfig::from_file(file.path().to_str().unwrap()).unwrap();
         assert_eq!(config.address, "10.0.0.1");
         assert_eq!(config.port, 6543);

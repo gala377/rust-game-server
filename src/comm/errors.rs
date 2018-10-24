@@ -1,4 +1,8 @@
+#[derive(Debug)]
 pub struct ReadError;
+
+#[derive(Debug)]
+pub struct ExecutionError;
 
 // todo implement
 // todo more error
