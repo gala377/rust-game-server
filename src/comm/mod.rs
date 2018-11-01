@@ -1,17 +1,17 @@
-// All of this module is considered WIP
-
-use std::io::{
-    Read,
-    Write,
-};
-use std::net::{
-    TcpListener,
-    TcpStream,
-};
-use std::thread;
-use std::sync::{
-    Arc,
-    RwLock,
+use std::{
+    io::{
+        Read,
+        Write,
+    },
+    net::{
+        TcpListener,
+        TcpStream,
+    },
+    sync::{
+        Arc,
+        RwLock,
+    },
+    thread,
 };
 
 use byteorder::{
@@ -21,23 +21,38 @@ use byteorder::{
 
 use super::config;
 
+
 mod errors;
 mod handlers;
 
 
+/// Alias for vector of bytes.
+/// Used to stress that the vector should contain
+/// all of the request. 
 pub type MessageRaw = Vec<u8>;
+/// Type by witch Messages can be identified.
 pub type MessageId = u32;
+/// Alias for vector of bytes.
+/// Used to stress that the vector should contain
+/// Message payload data.
 pub type Payload = Vec<u8>;
 
-
+/// Generic Message trait handled and returned
+/// from the server instance.
 pub trait Message {
     fn id(&self) -> MessageId;
     fn payload(&self) -> Payload;
 }
 
+/// Alias to Message.
+/// Used to stress that the current Message
+/// is treated as request to the server.
 pub trait Request: Message {}
 impl<T> Request for T where T: Message {}
 
+/// Alias to Message.
+/// Used to stress that the current Message
+/// is treated as response from the server.
 pub trait Response: Message {}
 impl<T> Response for T where T: Message {}
 
@@ -50,30 +65,24 @@ const MSG_ID_FIELD_LEN: usize = 4;
 const MSG_HEADER_LEN: usize = MSG_SKEY_FIELD_LEN + MSG_LEN_FIELD_LEN + MSG_ID_FIELD_LEN;
 
 
-// todo delete all the dead codes to know what is unneeded
-
 /// Handles incoming connections and dispatches them
 /// to Worker threads.
 pub struct Server {
-    #[allow(dead_code)]
-    config: config::ServerConfig,
     listener: TcpListener,
     req_handlers: Arc<RwLock<handlers::Dispatcher>>,
-
     thread_handles: Vec<thread::JoinHandle<()>>,
 }
 
 impl Server {
     /// Creates new server instance.
-    /// Opens file with from the provided path. Then
-    /// reads server documentation from it.
+    /// Opens file with from the provided path. 
+    /// Then reads server configuration from it.
     pub fn new(filename: String) -> Server {
         println!("Creating server from file {}.", filename);
         let config = config::ServerConfig::from_file(filename.as_str()).unwrap();
         let listener = TcpListener::bind(config.to_string()).unwrap();
         println!("Created.");
         Server {
-            config,
             listener,
             req_handlers: Arc::new(RwLock::new(handlers::init::new_dispatcher())),
 
@@ -81,8 +90,8 @@ impl Server {
         }
     }
 
-    /// Run waits for incoming connections. Then handles them taking requests
-    /// and sending responses.  
+    /// Run waits for incoming connections.
+    /// If one appears handles it in new thread.
     pub fn run(&mut self) {
         println!("Server: Staring listening.");
         let mut conn_count: usize = 0;
@@ -103,11 +112,13 @@ impl Server {
 }
 
 impl Drop for Server {
-
+    
+    /// Joins on currently running connection
+    /// handling threads.
     fn drop(&mut self) {
         for handle in self.thread_handles.drain(..) {
-            if let Err(_) = handle.join() {
-                println!("Error while joining a thread!");
+            if let Err(err) = handle.join() {
+                println!("Error while joining a thread! {:?}", err);
             }
         }
     }
@@ -128,11 +139,8 @@ impl ConnectionHandler {
         }
     }
 
-    // todo response? Thread pool?
     // note that now it olny handles single message
     // we need to make it an open communication.
-    /// Reads message to a buffer. Returns on error.
-    /// If no errors were present tries to interpret the message.
     fn handle_connection(&self, mut stream: TcpStream) {
         println!("ConnHandler[{}]: Trying to build message!", &self.id);
         let raw = match self.read_mess(&mut stream) {
@@ -164,7 +172,6 @@ impl ConnectionHandler {
 
     /// todo
     // Custom Error type
-    /// Reads raw message from TcpStream to buffer. Then returns it.
     fn read_mess(&self, stream: &mut TcpStream) -> Result<MessageRaw, errors::ReadError> {
         let mut buffer = [0; MSG_BATCH_LEN];
         let mut raw = Vec::with_capacity(MSG_HEADER_LEN); 
