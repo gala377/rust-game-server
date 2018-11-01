@@ -58,14 +58,7 @@ pub struct Server {
     #[allow(dead_code)]
     config: config::ServerConfig,
     listener: TcpListener,
-    req_handlers: handlers::Dispatcher,
-}
-
-
-lazy_static! {
-    static ref REQ_HANDLERS: handlers::Dispatcher = {
-        handlers::init::new_dispatcher()
-    };
+    thread_handles: Vec<thread::JoinHandle<()>>,
 }
 
 impl Server {
@@ -80,31 +73,60 @@ impl Server {
         Server {
             config,
             listener,
-            req_handlers: handlers::init::new_dispatcher(),
+
+            thread_handles: Vec::new(),
         }
     }
 
     /// Run waits for incoming connections. Then handles them taking requests
     /// and sending responses.  
-    pub fn run(&self) {
+    pub fn run(&mut self) {
         println!("Server: Staring listening.");
+        let local_hand_arc = Arc::new(RwLock::new(
+            handlers::init::new_dispatcher()
+        ));
         for stream in self.listener.incoming() {
             let stream = stream.unwrap();
             println!("Server: New connection established.");
-            thread::spawn(move || {
-                println!("HandlerThread: New thread handling connection!");
-                Self::handle_connection(stream);
-                println!("HandlerThread: Connection handled!");
-            });
+            let conn_handler = ConnectionHandler::new(local_hand_arc.clone());
+            self.thread_handles.push(
+                thread::spawn(move || {
+                    println!("HandlerThread: New thread handling connection!");
+                    conn_handler.handle_connection(stream);
+                    println!("HandlerThread: Connection handled!");
+                })
+            );
+        }
+        for handle in self.thread_handles.drain(..) {
+            if let Err(_) = handle.join() {
+                println!("Error while joining a thread!");
+            }
         }
     }
 
-    // todo response? Thread pool?
+
+
+
+}
+
+struct ConnectionHandler {
+    req_handlers: Arc<RwLock<handlers::Dispatcher>>,
+}
+
+impl ConnectionHandler {
+
+    fn new(req_handlers: Arc<RwLock<handlers::Dispatcher>>) -> ConnectionHandler {
+        ConnectionHandler {
+            req_handlers,
+        }
+    }
+
+        // todo response? Thread pool?
     // note that now it olny handles single message
     // we need to make it an open communication.
     /// Reads message to a buffer. Returns on error.
     /// If no errors were present tries to interpret the message.
-    fn handle_connection(mut stream: TcpStream) {
+    fn handle_connection(&self, mut stream: TcpStream) {
         println!("Server: Trying to build message!");
         let raw = match Self::read_mess(&mut stream) {
             Ok(buffer) => buffer,
@@ -114,20 +136,26 @@ impl Server {
             }
         };
         println!("Server: Message assembled. Request parsing!");
-        match REQ_HANDLERS.dispatch_from_raw(raw) {
-            Err(err) => println!("Server: Error while handling request {:?}", err),
-            Ok(resp) => {
-                println!("Server: Got response!");
-                match stream.write_all(&Self::response_as_bytes(resp)[..]) {
-                    Ok(_) => println!("Message sent successfully!"),
-                    Err(err) => println!("Error while sending the response {}", err),
-                }
-                stream.flush().unwrap();
-            }
-        };
+        
+        match self.req_handlers.read() {
+            Ok(guard) => {
+                match (*guard).dispatch_from_raw(raw) {
+                    Err(err) => println!("Server: Error while handling request {:?}", err),
+                    Ok(resp) => {
+                        println!("Server: Got response!");
+                        match stream.write_all(&Self::response_as_bytes(resp)[..]) {
+                            Ok(_) => println!("Message sent successfully!"),
+                            Err(err) => println!("Error while sending the response {}", err),
+                        }
+                        stream.flush().unwrap();
+                    }
+                };
+            },
+            Err(err) => println!("Error while getting a lock!"),
+        }
     }
 
-    // todo
+    /// todo
     // Custom Error type
     /// Reads raw message from TcpStream to buffer. Then returns it.
     fn read_mess(stream: &mut TcpStream) -> Result<MessageRaw, errors::ReadError> {
@@ -197,4 +225,5 @@ impl Server {
 
         as_bytes
     } 
+
 }

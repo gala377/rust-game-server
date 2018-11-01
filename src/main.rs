@@ -8,6 +8,6 @@ use std::string::String;
 use glib::comm::Server;
 
 fn main() {
-    let serv = Server::new(String::from_str("config.toml").unwrap());
+    let mut serv = Server::new(String::from_str("config.toml").unwrap());
     serv.run();
 }

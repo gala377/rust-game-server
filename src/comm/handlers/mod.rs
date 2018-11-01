@@ -27,7 +27,7 @@ mod requests;
 pub trait ReqHandler: Fn(MessageRaw) -> Option<Box<dyn Response>> {}
 impl<T> ReqHandler for T where T:Fn(MessageRaw) -> Option<Box<dyn Response>> {}
 
-pub type BoxedReqHandler = Box<dyn ReqHandler<Output = Option<Box<dyn Response>>> + Sync>;
+pub type BoxedReqHandler = Box<dyn ReqHandler<Output = Option<Box<dyn Response>>> + Sync + Send>;
 
 
 pub trait Builder {
