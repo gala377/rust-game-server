@@ -1,6 +1,13 @@
 use std::collections::HashMap;
+// use std::sync::{
+//     Arc,
+//     RwLock,
+// };
 
-use byteorder::{ByteOrder, LittleEndian};
+use byteorder::{
+    ByteOrder,
+    LittleEndian
+};
 
 use super::{
     MessageId,
@@ -20,7 +27,7 @@ mod requests;
 pub trait ReqHandler: Fn(MessageRaw) -> Option<Box<dyn Response>> {}
 impl<T> ReqHandler for T where T:Fn(MessageRaw) -> Option<Box<dyn Response>> {}
 
-pub type BoxedReqHandler = Box<dyn ReqHandler<Output = Option<Box<dyn Response>>>>;
+pub type BoxedReqHandler = Box<dyn ReqHandler<Output = Option<Box<dyn Response>>> + Sync>;
 
 
 pub trait Builder {
@@ -38,15 +45,16 @@ pub trait DefaultBuilder<T: Request, U: Response + 'static> {
     fn handle_request(T) -> Result<U, ReadError>;
 
     fn build_handler() -> BoxedReqHandler {
-        Box::new(|raw: MessageRaw| {
-            let req = match Self::req_from_raw(&raw) {
-                Err(_) => return None,
-                Ok(val) => val,
-            };
-            match Self::handle_request(req) {
-                Ok(resp) => Some(Box::new(resp)),
-                Err(_) => None,
-            }
+        Box::new(
+            |raw: MessageRaw| {
+                let req = match Self::req_from_raw(&raw) {
+                    Err(_) => return None,
+                    Ok(val) => val,
+                };
+                match Self::handle_request(req) {
+                    Ok(resp) => Some(Box::new(resp)),
+                    Err(_) => None,
+                }
         })
     }
 }
@@ -70,13 +78,13 @@ impl Dispatcher {
         match self.handlers.get(&id) {
             None => Err(ReadError{}),
             Some(handler) => {
-                return match handler(raw) {
-                    None => Err(ReadError{}),
-                    Some(resp) => Ok(resp),
+                        return match handler(raw) {
+                            None => Err(ReadError{}),
+                            Some(resp) => Ok(resp),
+                        }
                 }
-            },
+            }
         }
-    }
 
     fn read_id(raw: &MessageRaw) -> MessageId {
         LittleEndian::read_u32(&raw[MSG_SKEY_FIELD_LEN..MSG_SKEY_FIELD_LEN+MSG_ID_FIELD_LEN])

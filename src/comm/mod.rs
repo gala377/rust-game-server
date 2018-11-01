@@ -1,7 +1,18 @@
 // All of this module is considered WIP
 
-use std::io::Read;
-use std::net::{TcpListener, TcpStream};
+use std::io::{
+    Read,
+    Write,
+};
+use std::net::{
+    TcpListener,
+    TcpStream,
+};
+use std::thread;
+use std::sync::{
+    Arc,
+    RwLock,
+};
 
 use byteorder::{
     LittleEndian,
@@ -50,6 +61,13 @@ pub struct Server {
     req_handlers: handlers::Dispatcher,
 }
 
+
+lazy_static! {
+    static ref REQ_HANDLERS: handlers::Dispatcher = {
+        handlers::init::new_dispatcher()
+    };
+}
+
 impl Server {
     /// Creates new server instance.
     /// Opens file with from the provided path. Then
@@ -73,16 +91,22 @@ impl Server {
         for stream in self.listener.incoming() {
             let stream = stream.unwrap();
             println!("Server: New connection established.");
-            self.handle_connection(stream);
+            thread::spawn(move || {
+                println!("HandlerThread: New thread handling connection!");
+                Self::handle_connection(stream);
+                println!("HandlerThread: Connection handled!");
+            });
         }
     }
 
     // todo response? Thread pool?
+    // note that now it olny handles single message
+    // we need to make it an open communication.
     /// Reads message to a buffer. Returns on error.
     /// If no errors were present tries to interpret the message.
-    fn handle_connection(&self, mut stream: TcpStream) {
+    fn handle_connection(mut stream: TcpStream) {
         println!("Server: Trying to build message!");
-        let raw = match self.read_mess(&mut stream) {
+        let raw = match Self::read_mess(&mut stream) {
             Ok(buffer) => buffer,
             Err(val) => {
                 println!("Server: Error while building message.\nAborting...");
@@ -90,10 +114,15 @@ impl Server {
             }
         };
         println!("Server: Message assembled. Request parsing!");
-        match self.handle_request(raw) {
+        match REQ_HANDLERS.dispatch_from_raw(raw) {
             Err(err) => println!("Server: Error while handling request {:?}", err),
             Ok(resp) => {
                 println!("Server: Got response!");
+                match stream.write_all(&Self::response_as_bytes(resp)[..]) {
+                    Ok(_) => println!("Message sent successfully!"),
+                    Err(err) => println!("Error while sending the response {}", err),
+                }
+                stream.flush().unwrap();
             }
         };
     }
@@ -101,7 +130,7 @@ impl Server {
     // todo
     // Custom Error type
     /// Reads raw message from TcpStream to buffer. Then returns it.
-    fn read_mess(&self, stream: &mut TcpStream) -> Result<MessageRaw, errors::ReadError> {
+    fn read_mess(stream: &mut TcpStream) -> Result<MessageRaw, errors::ReadError> {
         let mut buffer = [0; MSG_BATCH_LEN];
         let mut raw = Vec::with_capacity(MSG_HEADER_LEN); 
         
@@ -125,7 +154,7 @@ impl Server {
             }
             if raw.len() >= MSG_HEADER_LEN && !header_parsed {
                 println!("Server: Read sufficient number of bytes to parse header.");
-                full_msg_len = self.parse_header(&raw[..])?;
+                full_msg_len = Self::parse_header(&raw[..])?;
                 full_msg_len += MSG_HEADER_LEN as u32;
                 println!("Server: Full msg is {} bytes. {} more bytes to read", full_msg_len, full_msg_len as usize - raw.len());
                 header_parsed = true;
@@ -141,7 +170,7 @@ impl Server {
         Ok(raw)
     }
 
-    fn parse_header(&self, header: &[u8]) -> Result<u32, errors::ReadError> {
+    fn parse_header(header: &[u8]) -> Result<u32, errors::ReadError> {
         for i in 0..MSG_SKEY_FIELD_LEN {
             if SKEY[i] != header[i] {
                 return Err(errors::ReadError{});
@@ -151,8 +180,21 @@ impl Server {
         Ok(LittleEndian::read_u32(&header[beggining..beggining+MSG_ID_FIELD_LEN]))
     }   
 
-    // todo <- implement
-    fn handle_request(&self, raw: MessageRaw) -> Result<Box<dyn Response>, errors::ReadError> {
-        self.req_handlers.dispatch_from_raw(raw)
-    }
+    fn response_as_bytes(resp: Box<dyn Response>) -> Vec<u8> {
+        let mut as_bytes = Vec::with_capacity(MSG_HEADER_LEN);
+        for &ch in SKEY.iter() {
+            as_bytes.push(ch);
+        };
+        let mut buff = [0; 4];
+        LittleEndian::write_u32(&mut buff, resp.id());    
+        as_bytes.extend_from_slice(&buff);
+        
+        let payload = resp.payload();
+        LittleEndian::write_u32(&mut buff, payload.len() as u32);
+        as_bytes.extend_from_slice(&buff);
+        as_bytes.reserve(payload.len());
+        as_bytes.extend_from_slice(&payload[..]);
+
+        as_bytes
+    } 
 }
