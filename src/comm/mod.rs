@@ -58,6 +58,8 @@ pub struct Server {
     #[allow(dead_code)]
     config: config::ServerConfig,
     listener: TcpListener,
+    req_handlers: Arc<RwLock<handlers::Dispatcher>>,
+
     thread_handles: Vec<thread::JoinHandle<()>>,
 }
 
@@ -73,6 +75,7 @@ impl Server {
         Server {
             config,
             listener,
+            req_handlers: Arc::new(RwLock::new(handlers::init::new_dispatcher())),
 
             thread_handles: Vec::new(),
         }
@@ -82,13 +85,11 @@ impl Server {
     /// and sending responses.  
     pub fn run(&mut self) {
         println!("Server: Staring listening.");
-        let local_hand_arc = Arc::new(RwLock::new(
-            handlers::init::new_dispatcher()
-        ));
+        let mut conn_count: usize = 0;
         for stream in self.listener.incoming() {
             let stream = stream.unwrap();
             println!("Server: New connection established.");
-            let conn_handler = ConnectionHandler::new(local_hand_arc.clone());
+            let conn_handler = ConnectionHandler::new(conn_count, self.req_handlers.clone());
             self.thread_handles.push(
                 thread::spawn(move || {
                     println!("HandlerThread: New thread handling connection!");
@@ -96,7 +97,14 @@ impl Server {
                     println!("HandlerThread: Connection handled!");
                 })
             );
+            conn_count += 1;
         }
+    }
+}
+
+impl Drop for Server {
+
+    fn drop(&mut self) {
         for handle in self.thread_handles.drain(..) {
             if let Err(_) = handle.join() {
                 println!("Error while joining a thread!");
@@ -104,61 +112,60 @@ impl Server {
         }
     }
 
-
-
-
 }
 
 struct ConnectionHandler {
+    id: usize,
     req_handlers: Arc<RwLock<handlers::Dispatcher>>,
 }
 
 impl ConnectionHandler {
 
-    fn new(req_handlers: Arc<RwLock<handlers::Dispatcher>>) -> ConnectionHandler {
+    fn new(id: usize, req_handlers: Arc<RwLock<handlers::Dispatcher>>) -> ConnectionHandler {
         ConnectionHandler {
+            id,
             req_handlers,
         }
     }
 
-        // todo response? Thread pool?
+    // todo response? Thread pool?
     // note that now it olny handles single message
     // we need to make it an open communication.
     /// Reads message to a buffer. Returns on error.
     /// If no errors were present tries to interpret the message.
     fn handle_connection(&self, mut stream: TcpStream) {
-        println!("Server: Trying to build message!");
-        let raw = match Self::read_mess(&mut stream) {
+        println!("ConnHandler[{}]: Trying to build message!", &self.id);
+        let raw = match self.read_mess(&mut stream) {
             Ok(buffer) => buffer,
             Err(val) => {
-                println!("Server: Error while building message.\nAborting...");
+                println!("ConnHandler[{}]: Error while building message.\nAborting...", &self.id);
                 return;
             }
         };
-        println!("Server: Message assembled. Request parsing!");
+        println!("ConnHandler[{}]: Message assembled. Request parsing!", &self.id);
         
         match self.req_handlers.read() {
             Ok(guard) => {
                 match (*guard).dispatch_from_raw(raw) {
-                    Err(err) => println!("Server: Error while handling request {:?}", err),
+                    Err(err) => println!("ConnHandler[{}]: Error while handling request {:?}", &self.id, err),
                     Ok(resp) => {
-                        println!("Server: Got response!");
+                        println!("ConnHandler[{}]: Got response!", &self.id);
                         match stream.write_all(&Self::response_as_bytes(resp)[..]) {
-                            Ok(_) => println!("Message sent successfully!"),
-                            Err(err) => println!("Error while sending the response {}", err),
+                            Ok(_) => println!("ConnHandler[{}]: Message sent successfully!", &self.id),
+                            Err(err) => println!("ConnHandler[{}]: Error while sending the response {}", &self.id, err),
                         }
                         stream.flush().unwrap();
                     }
                 };
             },
-            Err(err) => println!("Error while getting a lock!"),
+            Err(err) => println!("ConnHandler[{}]: Error while getting a lock!", &self.id),
         }
     }
 
     /// todo
     // Custom Error type
     /// Reads raw message from TcpStream to buffer. Then returns it.
-    fn read_mess(stream: &mut TcpStream) -> Result<MessageRaw, errors::ReadError> {
+    fn read_mess(&self, stream: &mut TcpStream) -> Result<MessageRaw, errors::ReadError> {
         let mut buffer = [0; MSG_BATCH_LEN];
         let mut raw = Vec::with_capacity(MSG_HEADER_LEN); 
         
@@ -169,11 +176,11 @@ impl ConnectionHandler {
                 Ok(n) => {
                     match n {
                         0 => {
-                            println!("Server: Connection severed!");
+                            println!("ConnHandler[{}]: Connection severed!", &self.id);
                             return Err(errors::ReadError{});
                         },
                         _ => {
-                            println!("Server: Read {} bytes. Proceeding.", n);
+                            println!("ConnHandler[{}]: Read {} bytes. Proceeding.", &self.id, n);
                             raw.extend_from_slice(&buffer[0..n]);
                         },
                     }
@@ -181,17 +188,17 @@ impl ConnectionHandler {
                 Err(err) => return Err(errors::ReadError{}),
             }
             if raw.len() >= MSG_HEADER_LEN && !header_parsed {
-                println!("Server: Read sufficient number of bytes to parse header.");
+                println!("ConnHandler[{}]: Read sufficient number of bytes to parse header.", &self.id);
                 full_msg_len = Self::parse_header(&raw[..])?;
                 full_msg_len += MSG_HEADER_LEN as u32;
-                println!("Server: Full msg is {} bytes. {} more bytes to read", full_msg_len, full_msg_len as usize - raw.len());
+                println!("ConnHandler[{}]: Full msg is {} bytes. {} more bytes to read", &self.id, full_msg_len, full_msg_len as usize - raw.len());
                 header_parsed = true;
             }
             if raw.len() == full_msg_len as usize && header_parsed {
-                println!("Server: Read all the payload bytes.");
+                println!("ConnHandler[{}]: Read all the payload bytes.", &self.id);
                 break;
             } else if raw.len() > full_msg_len as usize && header_parsed {
-                println!("Server: Read more than specified in payload len. Aborting...");
+                println!("ConnHandler[{}]: Read more than specified in payload len. Aborting...", &self.id);
                 return Err(errors::ReadError{});
             }
         }
