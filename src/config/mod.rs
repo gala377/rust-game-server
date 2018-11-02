@@ -5,6 +5,8 @@ extern crate toml;
 use std::error::Error;
 use std::fmt;
 
+use serde_derive::Deserialize;
+
 use super::helpers::file;
 
 /// Type Alias making return types more compact

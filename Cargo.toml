@@ -29,7 +29,5 @@ tempfile = "3"
 # for message deserialization
 byteorder = "1"
 
-# check how to use or delete
-log = { version = "0.4", features = ["release_max_level_info"]}
-
-lazy_static = "1.1.0"
+# custom from macro
+fast_from_derive = { path = "./fast_from_derive" }

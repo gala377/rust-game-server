@@ -1,16 +1,9 @@
 // Deserialization crates for config module
-#[macro_use]
 extern crate serde_derive;
 extern crate serde;
 
-#[macro_use]
-extern crate lazy_static;
-
-
-// #[macro_use]
-// extern crate log;
-
 extern crate byteorder;
+extern crate fast_from_derive;
 
 // GameServer configuration
 pub mod config;

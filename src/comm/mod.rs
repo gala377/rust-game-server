@@ -1,8 +1,10 @@
 use std::{
+    convert::From,
     io::{
         Read,
         Write,
     },
+    iter::FromIterator,
     net::{
         TcpListener,
         TcpStream,
@@ -172,7 +174,7 @@ impl ConnectionHandler {
 
     /// todo
     // Custom Error type
-    fn read_mess(&self, stream: &mut TcpStream) -> Result<MessageRaw, errors::ReadError> {
+    fn read_mess(&self, stream: &mut TcpStream) -> Result<MessageRaw, errors::BadRequestError> {
         let mut buffer = [0; MSG_BATCH_LEN];
         let mut raw = Vec::with_capacity(MSG_HEADER_LEN); 
         
@@ -184,7 +186,7 @@ impl ConnectionHandler {
                     match n {
                         0 => {
                             println!("ConnHandler[{}]: Connection severed!", &self.id);
-                            return Err(errors::ReadError{});
+                            return Err(errors::BadRequestError::from(errors::ReadError{}));
                         },
                         _ => {
                             println!("ConnHandler[{}]: Read {} bytes. Proceeding.", &self.id, n);
@@ -192,7 +194,7 @@ impl ConnectionHandler {
                         },
                     }
                 }
-                Err(err) => return Err(errors::ReadError{}),
+                Err(err) => return Err(errors::BadRequestError::from(errors::ReadError{})),
             }
             if raw.len() >= MSG_HEADER_LEN && !header_parsed {
                 println!("ConnHandler[{}]: Read sufficient number of bytes to parse header.", &self.id);
@@ -206,16 +208,19 @@ impl ConnectionHandler {
                 break;
             } else if raw.len() > full_msg_len as usize && header_parsed {
                 println!("ConnHandler[{}]: Read more than specified in payload len. Aborting...", &self.id);
-                return Err(errors::ReadError{});
+                return Err(errors::BadRequestError::from(errors::ReadError{}));
             }
         }
         Ok(raw)
     }
 
-    fn parse_header(header: &[u8]) -> Result<u32, errors::ReadError> {
+    fn parse_header(header: &[u8]) -> Result<u32, errors::HeaderValidationError> {
         for i in 0..MSG_SKEY_FIELD_LEN {
             if SKEY[i] != header[i] {
-                return Err(errors::ReadError{});
+                return Err(errors::HeaderValidationError{
+                    expected: Vec::from_iter(SKEY.iter().cloned()),
+                    actual: Vec::from_iter(header.iter().cloned()),
+                });
             }
         }
         let beggining = MSG_SKEY_FIELD_LEN + MSG_ID_FIELD_LEN;
