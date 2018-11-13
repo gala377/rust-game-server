@@ -1,14 +1,8 @@
-use super::super::{
-    Message,
-    MessageId,
-    Payload,
-};
-
+use super::super::{Message, MessageId, Payload};
 
 pub struct Hello;
 
 impl Message for Hello {
-
     fn id(&self) -> MessageId {
         0
     }
@@ -16,5 +10,4 @@ impl Message for Hello {
     fn payload(&self) -> Payload {
         Vec::new()
     }
-
 }

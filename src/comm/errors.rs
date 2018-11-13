@@ -1,18 +1,15 @@
-use std::error::Error;
 use std::convert::From;
+use std::error::Error;
 use std::fmt;
 
-use fast_from_derive::{
-    BadRequest,
-    SimpleError,
-};
+use fast_from_derive::{BadRequest, SimpleError};
 
 /// General 400 status errors and some more (like connection severed).
 #[derive(Debug)]
-pub struct BadRequestError(Box<dyn Error>);
+pub struct BadRequestError(pub Box<dyn Error>);
 
 impl fmt::Display for BadRequestError {
-    fn fmt(&self, f:  &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Bad request: {}", self.0)
     }
 }
@@ -25,7 +22,7 @@ impl Error for BadRequestError {
 
 /// General 500 status errors.
 #[derive(Debug)]
-pub struct InternalServerError(Box<dyn Error>);
+pub struct InternalServerError(pub Box<dyn Error>);
 
 impl fmt::Display for InternalServerError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -40,7 +37,7 @@ impl Error for InternalServerError {
 }
 
 /// Returned if received request
-/// had invalid headers server key. 
+/// had invalid headers server key.
 #[derive(Debug, BadRequest, SimpleError)]
 pub struct HeaderValidationError {
     pub expected: Vec<u8>,
@@ -49,7 +46,8 @@ pub struct HeaderValidationError {
 
 impl fmt::Display for HeaderValidationError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, 
+        write!(
+            f,
             "Invalid message header: (expected {:?}, got {:?})",
             self.expected, self.actual
         )
@@ -66,12 +64,21 @@ impl fmt::Display for ConnectionSevered {
     }
 }
 
-
 #[derive(Debug, BadRequest, SimpleError)]
-pub struct ReadError;
+pub struct ReadError {
+    couse: String,
+}
 
 impl fmt::Display for ReadError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Read error")
+        write!(f, "Read error {}", self.couse)
+    }
+}
+
+impl From<String> for ReadError {
+    fn from(couse: String) -> Self {
+        ReadError {
+            couse,
+        }
     }
 }

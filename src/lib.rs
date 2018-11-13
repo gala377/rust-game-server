@@ -1,6 +1,6 @@
 // Deserialization crates for config module
-extern crate serde_derive;
 extern crate serde;
+extern crate serde_derive;
 
 extern crate byteorder;
 extern crate fast_from_derive;

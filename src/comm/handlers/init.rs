@@ -1,13 +1,12 @@
-use super::{
-    Dispatcher,
-    DefaultBuilder,
-};
 use super::concrete;
-
+use super::{DefaultBuilder, Dispatcher};
 
 macro_rules! register {
     ($f:ident, $h:ident) => {
-        if !$f.register(concrete::$h::Handler::req_id(), concrete::$h::Handler::build_handler()) {
+        if !$f.register(
+            concrete::$h::Handler::req_id(),
+            concrete::$h::Handler::build_handler(),
+        ) {
             panic!(concat!(
                 "could not register ",
                 stringify!($h),
