@@ -117,49 +117,57 @@ impl ConnectionHandler {
         ConnectionHandler { id, req_handlers }
     }
 
-    // note that now it only handles single message
-    // we need to make it an open communication.
+    // has no meanings of stopping.
+    // communication channel on which we can check to see if we should close?
+    // 
     // whats more it needs to be stateful.
+    // maybe &mut self and sending reference to connection 
+    // to dispatch from raw?
     fn handle_connection(&self, mut stream: TcpStream) {
-        println!("ConnHandler[{}]: Trying to build message!", &self.id);
-        let raw = match self.read_mess(&mut stream) {
-            Ok(buffer) => buffer,
-            Err(err) => {
-                println!(
-                    "ConnHandler[{}]: Error while building message: {}.\nAborting...",
-                    &self.id, err,
-                );
-                return;
-            }
-        };
-        println!(
-            "ConnHandler[{}]: Message assembled. Request parsing!",
-            &self.id
-        );
+        loop {
+            println!("ConnHandler[{}]: Trying to build message!", &self.id);
+            let raw = match self.read_mess(&mut stream) {
+                Ok(buffer) => buffer,
+                Err(err) => {
+                    println!(
+                        "ConnHandler[{}]: Error while building message: {}.\nAborting...",
+                        &self.id, err,
+                    );
+                    return;
+                }
+            };
+            println!(
+                "ConnHandler[{}]: Message assembled. Request parsing!",
+                &self.id
+            );
 
-        match self.req_handlers.read() {
-            Ok(guard) => {
-                match (*guard).dispatch_from_raw(raw) {
-                    Err(err) => println!(
-                        "ConnHandler[{}]: Error while handling request {:?}",
-                        &self.id, err
-                    ),
-                    Ok(resp) => {
-                        println!("ConnHandler[{}]: Got response!", &self.id);
-                        match stream.write_all(&Self::response_as_bytes(resp)[..]) {
-                            Ok(_) => {
-                                println!("ConnHandler[{}]: Message sent successfully!", &self.id)
+            match self.req_handlers.read() {
+                Ok(guard) => {
+                    match (*guard).dispatch_from_raw(raw) {
+                        Err(err) => println!(
+                            "ConnHandler[{}]: Error while handling request {:?}",
+                            &self.id, err
+                        ),
+                        Ok(resp) => {
+                            println!("ConnHandler[{}]: Got response!", &self.id);
+                            match stream.write_all(&Self::response_as_bytes(resp)[..]) {
+                                Ok(_) => {
+                                    println!("ConnHandler[{}]: Message sent successfully!", &self.id)
+                                }
+                                Err(err) => println!(
+                                    "ConnHandler[{}]: Error while sending the response {}",
+                                    &self.id, err
+                                ),
                             }
-                            Err(err) => println!(
-                                "ConnHandler[{}]: Error while sending the response {}",
-                                &self.id, err
-                            ),
+                            stream.flush().unwrap();
                         }
-                        stream.flush().unwrap();
-                    }
-                };
+                    };
+                }
+                Err(err) => {
+                    println!("ConnHandler[{}]: Error while getting a lock! {}", &self.id, err);
+                    return;
+                }
             }
-            Err(err) => println!("ConnHandler[{}]: Error while getting a lock! {}", &self.id, err),
         }
     }
 
