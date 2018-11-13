@@ -2,7 +2,10 @@ use std::error::Error;
 use std::convert::From;
 use std::fmt;
 
-use fast_from_derive::BadRequest;
+use fast_from_derive::{
+    BadRequest,
+    SimpleError,
+};
 
 /// General 400 status errors and some more (like connection severed).
 #[derive(Debug)]
@@ -24,18 +27,24 @@ impl Error for BadRequestError {
 #[derive(Debug)]
 pub struct InternalServerError(Box<dyn Error>);
 
+impl fmt::Display for InternalServerError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Internal server error: {}", self.0)
+    }
+}
+
+impl Error for InternalServerError {
+    fn cause(&self) -> Option<&dyn Error> {
+        Some(self.0.as_ref())
+    }
+}
+
 /// Returned if received request
 /// had invalid headers server key. 
-#[derive(Debug, BadRequest)]
+#[derive(Debug, BadRequest, SimpleError)]
 pub struct HeaderValidationError {
     pub expected: Vec<u8>,
     pub actual: Vec<u8>,
-}
-
-impl Error for HeaderValidationError {
-    fn cause(&self) -> Option<&dyn Error> {
-        None
-    }
 }
 
 impl fmt::Display for HeaderValidationError {
@@ -48,7 +57,7 @@ impl fmt::Display for HeaderValidationError {
 }
 
 /// Returned when client unexpectedly closed the connection.
-#[derive(Debug, BadRequest)]
+#[derive(Debug, BadRequest, SimpleError)]
 pub struct ConnectionSevered;
 
 impl fmt::Display for ConnectionSevered {
@@ -57,24 +66,12 @@ impl fmt::Display for ConnectionSevered {
     }
 }
 
-impl Error for ConnectionSevered {
-    fn cause(&self) -> Option<&dyn Error> {
-        None
-    }
-}
 
-
-#[derive(Debug, BadRequest)]
+#[derive(Debug, BadRequest, SimpleError)]
 pub struct ReadError;
 
 impl fmt::Display for ReadError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Read error")
-    }
-}
-
-impl Error for ReadError {
-    fn cause(&self) -> Option<&dyn Error> {
-        None
     }
 }
