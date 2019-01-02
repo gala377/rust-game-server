@@ -61,7 +61,7 @@ pub struct Server {
 
 impl Server {
     /// Creates new server instance.
-    /// Opens file with from the provided path.
+    /// Opens file from the provided path.
     /// Then reads server configuration from it.
     pub fn new(filename: String) -> Server {
         println!("Creating server from file {}.", filename);
@@ -119,9 +119,9 @@ impl ConnectionHandler {
 
     // has no meanings of stopping.
     // communication channel on which we can check to see if we should close?
-    // 
+    //
     // whats more it needs to be stateful.
-    // maybe &mut self and sending reference to connection 
+    // maybe &mut self and sending reference to connection
     // to dispatch from raw?
     fn handle_connection(&self, mut stream: TcpStream) {
         loop {
@@ -144,6 +144,7 @@ impl ConnectionHandler {
             match self.req_handlers.read() {
                 Ok(guard) => {
                     match (*guard).dispatch_from_raw(raw) {
+                        // todo method to return error response from error
                         Err(err) => println!(
                             "ConnHandler[{}]: Error while handling request {:?}",
                             &self.id, err
@@ -151,9 +152,10 @@ impl ConnectionHandler {
                         Ok(resp) => {
                             println!("ConnHandler[{}]: Got response!", &self.id);
                             match stream.write_all(&Self::response_as_bytes(resp)[..]) {
-                                Ok(_) => {
-                                    println!("ConnHandler[{}]: Message sent successfully!", &self.id)
-                                }
+                                Ok(_) => println!(
+                                    "ConnHandler[{}]: Message sent successfully!",
+                                    &self.id
+                                ),
                                 Err(err) => println!(
                                     "ConnHandler[{}]: Error while sending the response {}",
                                     &self.id, err
@@ -164,7 +166,10 @@ impl ConnectionHandler {
                     };
                 }
                 Err(err) => {
-                    println!("ConnHandler[{}]: Error while getting a lock! {}", &self.id, err);
+                    println!(
+                        "ConnHandler[{}]: Error while getting a lock! {}",
+                        &self.id, err
+                    );
                     return;
                 }
             }
@@ -182,16 +187,18 @@ impl ConnectionHandler {
                 Ok(n) => match n {
                     0 => {
                         println!("ConnHandler[{}]: Connection severed!", &self.id);
-                        return Err(errors::BadRequestError::from(errors::ConnectionSevered{}));
+                        return Err(errors::BadRequestError::from(errors::ConnectionSevered {}));
                     }
                     _ => {
                         println!("ConnHandler[{}]: Read {} bytes. Proceeding.", &self.id, n);
                         raw.extend_from_slice(&buffer[0..n]);
                     }
                 },
-                Err(err) => return Err(
-                    errors::BadRequestError::from(
-                        errors::ReadError::from(err.to_string()))),
+                Err(err) => {
+                    return Err(errors::BadRequestError::from(errors::ReadError::from(
+                        err.to_string(),
+                    )))
+                }
             }
             if raw.len() >= MSG_HEADER_LEN && !header_parsed {
                 println!(
@@ -216,14 +223,14 @@ impl ConnectionHandler {
                     "ConnHandler[{}]: Read more than specified in payload len. Aborting...",
                     &self.id
                 );
-                return Err(
-                    errors::BadRequestError::from(
-                        errors::ReadError::from(format!(
-                            "read more bytes than specified in mess len. 
+                return Err(errors::BadRequestError::from(errors::ReadError::from(
+                    format!(
+                        "read more bytes than specified in mess len. 
                             Expected: {}, Read: {}",
-                            full_msg_len,
-                            raw.len(), 
-                ))));
+                        full_msg_len,
+                        raw.len(),
+                    ),
+                )));
             }
         }
         Ok(raw)
