@@ -54,7 +54,7 @@ const MSG_HEADER_LEN: usize = MSG_SKEY_FIELD_LEN + MSG_LEN_FIELD_LEN + MSG_ID_FI
 /// to Worker threads.
 pub struct Server {
     listener: TcpListener,
-    req_handlers: Arc<RwLock<handlers::Dispatcher>>,
+    req_dispatcher: Arc<RwLock<handlers::Dispatcher>>,
     thread_handles: Vec<thread::JoinHandle<()>>,
 }
 
@@ -69,7 +69,7 @@ impl Server {
         eprintln!("[{:^15}]: Created.", "Initialization");
         Server {
             listener,
-            req_handlers: Arc::new(RwLock::new(handlers::init::new_dispatcher())),
+            req_dispatcher: Arc::new(RwLock::new(handlers::init::new_dispatcher())),
 
             thread_handles: Vec::new(),
         }
@@ -83,7 +83,7 @@ impl Server {
         for stream in self.listener.incoming() {
             let stream = stream.unwrap();
             eprintln!("[{:^15}]: New connection established.", "Server");
-            let conn_handler = ConnectionHandler::new(conn_count, self.req_handlers.clone());
+            let conn_handler = ConnectionHandler::new(conn_count, self.req_dispatcher.clone());
             self.thread_handles.push(thread::spawn(move || {
                 eprintln!("[{:^15}]: New thread handling connection!", "HandlerThread");
                 conn_handler.handle_connection(stream);
@@ -94,6 +94,8 @@ impl Server {
     }
 }
 
+// todo: should actually stop these threads immediatly
+// not wait for them
 impl Drop for Server {
     /// Joins on currently running connection
     /// handling threads.
@@ -111,17 +113,21 @@ struct ConnectionHandler {
     req_handlers: Arc<RwLock<handlers::Dispatcher>>,
 }
 
+// todo: refactor
+// read_mess and handle_connection are too looong
 impl ConnectionHandler {
     fn new(id: usize, req_handlers: Arc<RwLock<handlers::Dispatcher>>) -> ConnectionHandler {
         ConnectionHandler { id, req_handlers }
     }
 
+    // todo:
     // has no meanings of stopping.
     // communication channel on which we can check to see if we should close?
     //
     // whats more it needs to be stateful.
     // maybe &mut self and sending reference to connection
     // to dispatch from raw?
+    // Or some kind of reference to a context struct being passed along? 
     fn handle_connection(&self, mut stream: TcpStream) {
         loop {
             eprintln!("[{:^12}[{}]]: Trying to build message!", "ConnHandler", &self.id);

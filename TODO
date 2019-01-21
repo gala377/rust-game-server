@@ -10,9 +10,11 @@
 // cannot send request in their name
 
 
+For now:
+     ? Communication with the Server and Connection Handlers by channel.
+        - note: Do we really need to be able to communicate to the
+                running server from the console? 
+                We can, but do we need to? 
 
-
-For now
-    Implement request handlind and writing response.
-
-    Implement msg request payload on vector.
+     ? ConnectionHandler - Context struct reference
+     ? ConnectionHandler - refactoring
