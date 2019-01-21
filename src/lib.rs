@@ -2,7 +2,6 @@
 extern crate serde;
 extern crate serde_derive;
 
-extern crate byteorder;
 extern crate fast_from_derive;
 
 // GameServer configuration

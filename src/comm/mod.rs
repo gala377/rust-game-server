@@ -63,10 +63,10 @@ impl Server {
     /// Opens file from the provided path.
     /// Then reads server configuration from it.
     pub fn new(filename: String) -> Server {
-        println!("Creating server from file {}.", filename);
+        eprintln!("[{:^15}]: Creating server from file {}.", "Initialization", filename);
         let config = config::ServerConfig::from_file(filename.as_str()).unwrap();
         let listener = TcpListener::bind(config.to_string()).unwrap();
-        println!("Created.");
+        eprintln!("[{:^15}]: Created.", "Initialization");
         Server {
             listener,
             req_handlers: Arc::new(RwLock::new(handlers::init::new_dispatcher())),
@@ -78,16 +78,16 @@ impl Server {
     /// Run waits for incoming connections.
     /// If one appears handles it in new thread.
     pub fn run(&mut self) {
-        println!("Server: Staring listening.");
+        eprintln!("[{:^15}]: Staring listening.", "Server");
         let mut conn_count: usize = 0;
         for stream in self.listener.incoming() {
             let stream = stream.unwrap();
-            println!("Server: New connection established.");
+            eprintln!("[{:^15}]: New connection established.", "Server");
             let conn_handler = ConnectionHandler::new(conn_count, self.req_handlers.clone());
             self.thread_handles.push(thread::spawn(move || {
-                println!("HandlerThread: New thread handling connection!");
+                eprintln!("[{:^15}]: New thread handling connection!", "HandlerThread");
                 conn_handler.handle_connection(stream);
-                println!("HandlerThread: Connection handled!");
+                eprintln!("[{:^15}]: Connection handled!", "HandlerThread");
             }));
             conn_count += 1;
         }
@@ -100,7 +100,7 @@ impl Drop for Server {
     fn drop(&mut self) {
         for handle in self.thread_handles.drain(..) {
             if let Err(err) = handle.join() {
-                println!("Error while joining a thread! {:?}", err);
+                eprintln!("[{:^15}]: Error while joining a thread! {:?}", "Server", err);
             }
         }
     }
@@ -124,40 +124,40 @@ impl ConnectionHandler {
     // to dispatch from raw?
     fn handle_connection(&self, mut stream: TcpStream) {
         loop {
-            println!("ConnHandler[{}]: Trying to build message!", &self.id);
+            eprintln!("[{:^12}[{}]]: Trying to build message!", "ConnHandler", &self.id);
             let raw = match self.read_mess(&mut stream) {
                 Ok(buffer) => buffer,
                 Err(err) => {
-                    println!(
-                        "ConnHandler[{}]: Error while building message: {}.\nAborting...",
-                        &self.id, err,
+                    eprintln!(
+                        "[{:^12}[{}]]: Error while building message: \"{}\". Aborting...",
+                        "ConnHandler", &self.id, err,
                     );
                     return;
                 }
             };
-            println!(
-                "ConnHandler[{}]: Message assembled. Request parsing!",
-                &self.id
+            eprintln!(
+                "[{:^12}[{}]]: Message assembled. Request parsing!",
+                "ConnHandler", &self.id
             );
 
             match self.req_handlers.read() {
                 Ok(guard) => {
                     match (*guard).dispatch_from_raw(raw) {
                         // todo method to return error response from error
-                        Err(err) => println!(
-                            "ConnHandler[{}]: Error while handling request {:?}",
-                            &self.id, err
+                        Err(err) => eprintln!(
+                            "[{:^12}[{}]]: Error while handling request {:?}",
+                            "ConnHandler", &self.id, err
                         ),
                         Ok(resp) => {
-                            println!("ConnHandler[{}]: Got response!", &self.id);
+                            eprintln!("[{:^12}[{}]]: Got response!", "ConnHandler", &self.id);
                             match stream.write_all(&Self::response_as_bytes(resp)[..]) {
-                                Ok(_) => println!(
-                                    "ConnHandler[{}]: Message sent successfully!",
-                                    &self.id
+                                Ok(_) => eprintln!(
+                                    "[{:^12}[{}]]: Message sent successfully!",
+                                    "ConnHandler", &self.id
                                 ),
-                                Err(err) => println!(
-                                    "ConnHandler[{}]: Error while sending the response {}",
-                                    &self.id, err
+                                Err(err) => eprintln!(
+                                    "[{:^12}[{}]]: Error while sending the response \"{}\"",
+                                    "ConnHandler", &self.id, err
                                 ),
                             }
                             stream.flush().unwrap();
@@ -165,9 +165,9 @@ impl ConnectionHandler {
                     };
                 }
                 Err(err) => {
-                    println!(
-                        "ConnHandler[{}]: Error while getting a lock! {}",
-                        &self.id, err
+                    eprintln!(
+                        "[{:^12}[{}]]: Error while getting a lock! {}",
+                        "ConnHandler", &self.id, err
                     );
                     return;
                 }
@@ -185,11 +185,11 @@ impl ConnectionHandler {
             match stream.read(&mut buffer) {
                 Ok(n) => match n {
                     0 => {
-                        println!("ConnHandler[{}]: Connection severed!", &self.id);
+                        eprintln!("[{:^12}[{}]]: Connection severed!", "ConnHandler", &self.id);
                         return Err(errors::BadRequestError::from(errors::ConnectionSevered {}));
                     }
                     _ => {
-                        println!("ConnHandler[{}]: Read {} bytes. Proceeding.", &self.id, n);
+                        eprintln!("[{:^12}[{}]]: Read {} bytes. Proceeding.", "ConnHandler", &self.id, n);
                         raw.extend_from_slice(&buffer[0..n]);
                     }
                 },
@@ -200,14 +200,15 @@ impl ConnectionHandler {
                 }
             }
             if raw.len() >= MSG_HEADER_LEN && !header_parsed {
-                println!(
-                    "ConnHandler[{}]: Read sufficient number of bytes to parse header.",
-                    &self.id
+                eprintln!(
+                    "[{:^12}[{}]]: Read sufficient number of bytes to parse header.",
+                    "ConnHandler", &self.id
                 );
                 full_msg_len = Self::parse_header(&raw[..])?;
                 full_msg_len += MSG_HEADER_LEN as u32;
-                println!(
-                    "ConnHandler[{}]: Full msg is {} bytes. {} more bytes to read",
+                eprintln!(
+                    "[{:^12}[{}]]: Full msg is {} bytes. {} more bytes to read",
+                    "ConnHandler",
                     &self.id,
                     full_msg_len,
                     full_msg_len as usize - raw.len()
@@ -215,12 +216,12 @@ impl ConnectionHandler {
                 header_parsed = true;
             }
             if raw.len() == full_msg_len as usize && header_parsed {
-                println!("ConnHandler[{}]: Read all the payload bytes.", &self.id);
+                eprintln!("[{:^12}[{}]]: Read all the payload bytes.", "ConnHandler", &self.id);
                 break;
             } else if raw.len() > full_msg_len as usize && header_parsed {
-                println!(
-                    "ConnHandler[{}]: Read more than specified in payload len. Aborting...",
-                    &self.id
+                eprintln!(
+                    "[{:^12}[{}]]: Read more than specified in payload len. Aborting...",
+                    "ConnHandler", &self.id
                 );
                 return Err(errors::BadRequestError::from(errors::ReadError::from(
                     format!(

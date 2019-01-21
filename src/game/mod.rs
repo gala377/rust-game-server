@@ -331,7 +331,7 @@ mod tests {
                     $p => true,
                 ),*
                 actual @ _ => {
-                    println!("actual is {:?}", actual);
+                    eprintln!("actual is {:?}", actual);
                     false
                 },
             });
