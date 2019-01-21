@@ -77,6 +77,7 @@ impl Handler {
 
             match self.req_handlers.read() {
                 Ok(guard) => {
+                    // todo pass reference to context
                     match (*guard).dispatch_from_raw(raw) {
                         // todo method to return error response from error
                         Err(err) => eprintln!(
