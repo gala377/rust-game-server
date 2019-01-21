@@ -1,7 +1,14 @@
-use super::super::super::{errors::ReadError, MessageId, MessageRaw, MSG_HEADER_LEN};
-use super::super::requests;
-use super::super::responses;
-use super::super::DefaultBuilder;
+use crate::comm::{
+    errors::ReadError,
+    connection::MSG_HEADER_LEN,
+    MessageId,
+    MessageRaw,
+};
+use crate::comm::handlers::{
+    requests,
+    responses,
+    DefaultBuilder,
+};
 
 pub struct Handler;
 

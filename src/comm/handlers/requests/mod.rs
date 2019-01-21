@@ -1,4 +1,4 @@
-use super::super::{Message, MessageId, Payload};
+use crate::comm::{Message, MessageId, Payload};
 
 pub struct Hello;
 

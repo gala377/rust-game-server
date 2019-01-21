@@ -1,22 +1,20 @@
 use std::collections::HashMap;
 use std::error::Error;
-// use std::sync::{
-//     Arc,
-//     RwLock,
-// };
 
-use super::errors::{
-    ReadError,
-    BadRequestError,
-    InternalServerError,
-};
-use super::{
+use crate::comm::{
+    errors::{
+        ReadError,
+        BadRequestError,
+        InternalServerError,
+    },
+    connection::{
+        MSG_ID_FIELD_LEN,
+        MSG_SKEY_FIELD_LEN
+    },
     MessageId,
     MessageRaw,
     Request, 
     Response,
-    MSG_ID_FIELD_LEN,
-    MSG_SKEY_FIELD_LEN
 };
 
 
