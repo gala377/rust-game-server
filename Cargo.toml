@@ -26,8 +26,5 @@ toml = "0.4"
 # for some testing 
 tempfile = "3"
 
-# for message deserialization
-byteorder = "1"
-
 # custom from macro
 fast_from_derive = { path = "./fast_from_derive" }

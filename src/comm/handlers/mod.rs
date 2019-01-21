@@ -5,11 +5,6 @@ use std::error::Error;
 //     RwLock,
 // };
 
-use byteorder::{
-    ByteOrder,
-    LittleEndian
-};
-
 use super::errors::{
     ReadError,
     BadRequestError,
@@ -93,7 +88,9 @@ impl Dispatcher {
     }
 
     fn read_id(raw: &MessageRaw) -> MessageId {
-        LittleEndian::read_u32(&raw[MSG_SKEY_FIELD_LEN..MSG_SKEY_FIELD_LEN + MSG_ID_FIELD_LEN])
+        let mut id_bytes: [u8; 4] = [0; 4];
+        id_bytes.copy_from_slice(&raw[MSG_SKEY_FIELD_LEN..MSG_SKEY_FIELD_LEN + MSG_ID_FIELD_LEN]);
+        u32::from_le_bytes(id_bytes)
     }
 
     pub fn register(&mut self, id: MessageId, builder: BoxedReqHandler) -> bool {

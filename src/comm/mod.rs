@@ -7,7 +7,6 @@ use std::{
     thread,
 };
 
-use byteorder::{ByteOrder, LittleEndian};
 
 use super::config;
 
@@ -246,9 +245,9 @@ impl ConnectionHandler {
             }
         }
         let beggining = MSG_SKEY_FIELD_LEN + MSG_ID_FIELD_LEN;
-        Ok(LittleEndian::read_u32(
-            &header[beggining..beggining + MSG_ID_FIELD_LEN],
-        ))
+        let mut id_as_bytes: [u8; 4] = [0; 4];
+        id_as_bytes.copy_from_slice(&header[beggining..beggining + MSG_ID_FIELD_LEN]);
+        Ok(u32::from_le_bytes(id_as_bytes))
     }
 
     fn response_as_bytes(resp: Box<dyn Response>) -> Vec<u8> {
@@ -256,13 +255,10 @@ impl ConnectionHandler {
         for &ch in SKEY.iter() {
             as_bytes.push(ch);
         }
-        let mut buff = [0; 4];
-        LittleEndian::write_u32(&mut buff, resp.id());
-        as_bytes.extend_from_slice(&buff);
+        as_bytes.extend(&resp.id().to_le_bytes());
 
         let payload = resp.payload();
-        LittleEndian::write_u32(&mut buff, payload.len() as u32);
-        as_bytes.extend_from_slice(&buff);
+        as_bytes.extend(&(payload.len() as u32).to_le_bytes());
         as_bytes.reserve(payload.len());
         as_bytes.extend_from_slice(&payload[..]);
 
