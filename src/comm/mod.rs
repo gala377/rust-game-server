@@ -73,7 +73,9 @@ impl Server {
         for stream in self.listener.incoming() {
             let stream = stream.unwrap();
             eprintln!("[{:^15}]: New connection established.", "Server");
-            let conn_handler = connection::Handler::new(conn_count, self.req_dispatcher.clone());
+            let conn_handler = connection::Handler::new(
+                connection::Context::new(conn_count),
+                self.req_dispatcher.clone());
             self.thread_handles.push(thread::spawn(move || {
                 eprintln!("[{:^15}]: New thread handling connection!", "HandlerThread");
                 conn_handler.handle_connection(stream);
