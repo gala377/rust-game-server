@@ -23,6 +23,6 @@ impl Message for PlayerRegistered {
     }
 
     fn payload(&self) -> Payload {
-        self.player_id.clone().into_bytes()
+        self.player_id.to_le_bytes().to_vec()
     }
 }

@@ -247,7 +247,7 @@ impl Handler {
         let payload = resp.payload();
         as_bytes.extend(&(payload.len() as u32).to_le_bytes());
         as_bytes.reserve(payload.len());
-        as_bytes.extend_from_slice(&payload[..]);
+        as_bytes.extend(payload.iter());
 
         as_bytes
     }

@@ -2,14 +2,14 @@ use rand;
 
 use crate::game::Game;
 
-pub type PlayerID = String;
+pub type PlayerID = u128;
 
 pub struct Agent {
     game_model: Game,
 
     assigned_players: u8,
     // todo make it a HashMap maybye? for faster access...?
-    player_ids: Vec<String>,
+    player_ids: Vec<PlayerID>,
 }
 
 impl Agent {
@@ -38,10 +38,6 @@ impl Agent {
     }    
 
     fn gen_player_id() -> PlayerID {
-        let mut id = String::new();
-        for _i in 0..16 {
-            id.push(rand::random())
-        }
-        id
+        rand::random()
     }
 }
