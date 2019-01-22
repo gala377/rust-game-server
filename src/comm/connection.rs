@@ -105,7 +105,7 @@ impl Handler {
     }
 
     fn handle_request(&self, raw: MessageRaw, req_dispatcher: &handlers::Dispatcher, ctx: &mut Context) -> Option<Box<dyn Response>> {
-        match req_dispatcher.dispatch_from_raw(raw) {
+        match req_dispatcher.dispatch_from_raw(raw, ctx) {
             // todo method to return error response from error
             Err(err) => {
                 eprintln!(

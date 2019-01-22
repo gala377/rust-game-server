@@ -1,5 +1,14 @@
-use crate::comm::handlers::{requests, responses, DefaultBuilder};
-use crate::comm::{connection::MSG_HEADER_LEN, errors::ReadError, MessageId, MessageRaw};
+use crate::comm::{
+    connection, 
+    connection::MSG_HEADER_LEN,
+    errors::ReadError, 
+    MessageId, MessageRaw, 
+    handlers::{
+        requests,
+        responses,
+        DefaultBuilder
+    },
+};
 
 pub struct Handler;
 
@@ -23,8 +32,9 @@ impl DefaultBuilder<requests::Hello, responses::Welcome> for Handler {
         }
     }
 
-    fn handle_request(_req: requests::Hello) -> Result<responses::Welcome, ReadError> {
+    fn handle_request(_req: requests::Hello, ctx: &mut connection::Context) -> Result<responses::Welcome, ReadError> {
         eprintln!("[{:^15}]: Welcome", "HelloHandler");
+        ctx.initialized = true;
         Ok(responses::Welcome {})
     }
 }

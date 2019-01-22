@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::error::Error;
 
 use crate::comm::{
+    connection,
     connection::{MSG_ID_FIELD_LEN, MSG_SKEY_FIELD_LEN},
     errors::{BadRequestError, InternalServerError, ReadError},
     MessageId, MessageRaw, Request, Response,
@@ -13,8 +14,8 @@ mod responses;
 
 pub mod init;
 
-pub trait ReqHandler: Fn(MessageRaw) -> Option<Box<dyn Response>> {}
-impl<T> ReqHandler for T where T: Fn(MessageRaw) -> Option<Box<dyn Response>> {}
+pub trait ReqHandler: Fn(MessageRaw, &mut connection::Context) -> Option<Box<dyn Response>> {}
+impl<T> ReqHandler for T where T: Fn(MessageRaw, &mut connection::Context) -> Option<Box<dyn Response>> {}
 
 pub type BoxedReqHandler = Box<dyn ReqHandler<Output = Option<Box<dyn Response>>> + Sync + Send>;
 
@@ -28,15 +29,15 @@ pub trait DefaultBuilder<T: Request, U: Response + 'static> {
     fn req_id() -> MessageId;
 
     fn req_from_raw(raw: &MessageRaw) -> Result<T, ReadError>;
-    fn handle_request(req: T) -> Result<U, ReadError>;
+    fn handle_request(req: T, ctx: &mut connection::Context) -> Result<U, ReadError>;
 
     fn build_handler() -> BoxedReqHandler {
-        Box::new(|raw: MessageRaw| {
+        Box::new(|raw: MessageRaw, ctx: &mut connection::Context| {
             let req = match Self::req_from_raw(&raw) {
                 Err(_) => return None,
                 Ok(val) => val,
             };
-            match Self::handle_request(req) {
+            match Self::handle_request(req, ctx) {
                 Ok(resp) => Some(Box::new(resp)),
                 Err(_) => None,
             }
@@ -55,7 +56,7 @@ impl Dispatcher {
         }
     }
 
-    pub fn dispatch_from_raw(&self, raw: MessageRaw) -> Result<Box<dyn Response>, Box<dyn Error>> {
+    pub fn dispatch_from_raw(&self, raw: MessageRaw, ctx: &mut connection::Context) -> Result<Box<dyn Response>, Box<dyn Error>> {
         let id = Self::read_id(&raw);
         match self.handlers.get(&id) {
             None => Err(Box::new(BadRequestError::from(ReadError::from(format!(
@@ -63,7 +64,7 @@ impl Dispatcher {
                 id
             ))))),
             Some(handler) => {
-                return match handler(raw) {
+                return match handler(raw, ctx) {
                     None => Err(Box::new(InternalServerError(Box::new(ReadError::from(
                         format!("Req handler for message with id {} returned None", id),
                     ))))),
