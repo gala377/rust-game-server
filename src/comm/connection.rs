@@ -35,8 +35,6 @@ pub struct Handler {
     req_handlers: Arc<RwLock<handlers::Dispatcher>>,
 }
 
-// todo: refactor
-// read_mess and handle_connection are too looong
 impl Handler {
     /// Initializes new connection handler. 
     /// Where context is initial connection context.
