@@ -48,6 +48,17 @@ pub trait DefaultBuilder {
     }
 }
 
+impl<T> Builder for T where T: DefaultBuilder {
+    
+    fn req_id() -> MessageId {
+        <T as DefaultBuilder>::req_id()
+    }
+
+    fn build_handler() -> BoxedReqHandler {
+        <T as DefaultBuilder>::build_handler()
+    } 
+}
+
 pub struct Dispatcher {
     handlers: HashMap<MessageId, BoxedReqHandler>,
 }
