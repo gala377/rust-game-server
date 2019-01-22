@@ -38,6 +38,11 @@ pub struct Handler {
 // todo: refactor
 // read_mess and handle_connection are too looong
 impl Handler {
+    /// Initializes new connection handler. 
+    /// Where context is initial connection context.
+    /// And req_handlers is a reader mutex on request dispatcher so
+    /// its not cloned each new connection and not blocked 
+    /// as its only used as a const reference.
     pub fn new(context: Context, req_handlers: Arc<RwLock<handlers::Dispatcher>>) -> Handler {
         Handler {
             context,
@@ -48,11 +53,6 @@ impl Handler {
     // todo:
     // has no meanings of stopping.
     // communication channel on which we can check to see if we should close?
-    //
-    // whats more it needs to be stateful.
-    // maybe &mut self and sending reference to connection
-    // to dispatch from raw?
-    // Or some kind of reference to a context struct being passed along?
     pub fn handle_connection(&self, mut stream: TcpStream) {
         let mut ctx = self.context.clone();
         loop {
