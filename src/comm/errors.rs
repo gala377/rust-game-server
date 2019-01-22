@@ -77,8 +77,6 @@ impl fmt::Display for ReadError {
 
 impl From<String> for ReadError {
     fn from(couse: String) -> Self {
-        ReadError {
-            couse,
-        }
+        ReadError { couse }
     }
 }

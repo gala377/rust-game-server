@@ -1,5 +1,4 @@
 /// Helper functions for operations on files.
-
 use std::error::Error;
 use std::fs::File;
 use std::io::Read;

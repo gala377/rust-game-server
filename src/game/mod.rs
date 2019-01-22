@@ -367,13 +367,13 @@ mod tests {
         let g = Game::new(4, (10, 10));
         assert_eq!(g.units.len(), 0);
         assert_match!(
-            g,
-            Game {
-                num_of_players: 4,
-                board_size: (10, 10),
-                num_of_units: 0,
-                ..
-            });
+        g,
+        Game {
+            num_of_players: 4,
+            board_size: (10, 10),
+            num_of_units: 0,
+            ..
+        });
     }
 
     #[test]
@@ -424,15 +424,15 @@ mod tests {
         g.add_unit(0, (1, 1), unit::Category::Pickerman).unwrap();
         g.add_unit(3, (2, 1), unit::Category::Cavalry).unwrap();
         assert_match!(
-            &g.units[1],
-            Unit {
-                state: unit::State::Idle,
-                category: unit::Category::Cavalry,
-                id: 1,
-                owner_id: 3,
-                position: (2, 1),
-                ..
-            });
+        &g.units[1],
+        Unit {
+            state: unit::State::Idle,
+            category: unit::Category::Cavalry,
+            id: 1,
+            owner_id: 3,
+            position: (2, 1),
+            ..
+        });
     }
 
     #[test]
@@ -619,23 +619,23 @@ mod tests {
             Err(GameError::MoveOutsideUnitsReach(49, 49))
         );
         assert_match!(
-            g.get_unit(0).unwrap(),
-            Unit {
-                id: 0,
-                category: unit::Category::Knight,
-                state: unit::State::Idle,
-                position: (0, 0),
-                ..
-            });
+        g.get_unit(0).unwrap(),
+        Unit {
+            id: 0,
+            category: unit::Category::Knight,
+            state: unit::State::Idle,
+            position: (0, 0),
+            ..
+        });
         assert_match!(
-            g.get_unit(1).unwrap(),
-            Unit {
-                id: 1,
-                category: unit::Category::Knight,
-                state: unit::State::Idle,
-                position: (99, 99),
-                ..
-            });
+        g.get_unit(1).unwrap(),
+        Unit {
+            id: 1,
+            category: unit::Category::Knight,
+            state: unit::State::Idle,
+            position: (99, 99),
+            ..
+        });
     }
 
     #[test]

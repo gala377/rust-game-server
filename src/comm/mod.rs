@@ -6,8 +6,8 @@ use std::{
 
 use crate::config;
 
-mod errors;
 mod connection;
+mod errors;
 mod handlers;
 
 /// Alias for vector of bytes.
@@ -53,7 +53,10 @@ impl Server {
     /// Opens file from the provided path.
     /// Then reads server configuration from it.
     pub fn new(filename: String) -> Server {
-        eprintln!("[{:^15}]: Creating server from file {}.", "Initialization", filename);
+        eprintln!(
+            "[{:^15}]: Creating server from file {}.",
+            "Initialization", filename
+        );
         let config = config::ServerConfig::from_file(filename.as_str()).unwrap();
         let listener = TcpListener::bind(config.to_string()).unwrap();
         eprintln!("[{:^15}]: Created.", "Initialization");
@@ -75,7 +78,8 @@ impl Server {
             eprintln!("[{:^15}]: New connection established.", "Server");
             let conn_handler = connection::Handler::new(
                 connection::Context::new(conn_count),
-                self.req_dispatcher.clone());
+                self.req_dispatcher.clone(),
+            );
             self.thread_handles.push(thread::spawn(move || {
                 eprintln!("[{:^15}]: New thread handling connection!", "HandlerThread");
                 conn_handler.handle_connection(stream);
@@ -94,7 +98,10 @@ impl Drop for Server {
     fn drop(&mut self) {
         for handle in self.thread_handles.drain(..) {
             if let Err(err) = handle.join() {
-                eprintln!("[{:^15}]: Error while joining a thread! {:?}", "Server", err);
+                eprintln!(
+                    "[{:^15}]: Error while joining a thread! {:?}",
+                    "Server", err
+                );
             }
         }
     }

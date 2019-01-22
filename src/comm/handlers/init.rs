@@ -1,9 +1,4 @@
-use crate::comm::handlers::{
-    concrete,
-    
-    DefaultBuilder,
-    Dispatcher,
-};
+use crate::comm::handlers::{concrete, DefaultBuilder, Dispatcher};
 
 macro_rules! register {
     ($f:ident, $h:ident) => {

@@ -1,6 +1,5 @@
 /// Module handles cofiguration files reading.
 /// And the internal config representation.
-
 use std::error::Error;
 use std::fmt;
 

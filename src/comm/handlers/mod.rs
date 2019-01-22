@@ -2,28 +2,16 @@ use std::collections::HashMap;
 use std::error::Error;
 
 use crate::comm::{
-    errors::{
-        ReadError,
-        BadRequestError,
-        InternalServerError,
-    },
-    connection::{
-        MSG_ID_FIELD_LEN,
-        MSG_SKEY_FIELD_LEN
-    },
-    MessageId,
-    MessageRaw,
-    Request, 
-    Response,
+    connection::{MSG_ID_FIELD_LEN, MSG_SKEY_FIELD_LEN},
+    errors::{BadRequestError, InternalServerError, ReadError},
+    MessageId, MessageRaw, Request, Response,
 };
-
 
 mod concrete;
 mod requests;
 mod responses;
 
 pub mod init;
-
 
 pub trait ReqHandler: Fn(MessageRaw) -> Option<Box<dyn Response>> {}
 impl<T> ReqHandler for T where T: Fn(MessageRaw) -> Option<Box<dyn Response>> {}
@@ -70,17 +58,17 @@ impl Dispatcher {
     pub fn dispatch_from_raw(&self, raw: MessageRaw) -> Result<Box<dyn Response>, Box<dyn Error>> {
         let id = Self::read_id(&raw);
         match self.handlers.get(&id) {
-            None => Err(Box::new(BadRequestError::from(
-                ReadError::from(format!("Mess id ({}) doesn't match any of registered ones.", id))
-            ))),
+            None => Err(Box::new(BadRequestError::from(ReadError::from(format!(
+                "Mess id ({}) doesn't match any of registered ones.",
+                id
+            ))))),
             Some(handler) => {
                 return match handler(raw) {
-                    None => Err(
-                        Box::new(InternalServerError(
-                            Box::new(ReadError::from(format!(
-                            "Req handler for message with id {} returned None", id)))))),
+                    None => Err(Box::new(InternalServerError(Box::new(ReadError::from(
+                        format!("Req handler for message with id {} returned None", id),
+                    ))))),
                     Some(resp) => Ok(resp),
-                }
+                };
             }
         }
     }
