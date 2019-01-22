@@ -104,7 +104,7 @@ impl Handler {
 
     fn handle_request(
         &self,
-        raw: Vec<u8>,
+        raw: MessageRaw,
         req_dispatcher: &handlers::Dispatcher,
     ) -> Option<Box<dyn Response>> {
         match req_dispatcher.dispatch_from_raw(raw) {
@@ -141,49 +141,14 @@ impl Handler {
     }
 
     fn read_mess(&self, stream: &mut TcpStream) -> Result<MessageRaw, errors::BadRequestError> {
-        let mut buffer = [0; MSG_BATCH_LEN];
         let mut raw = Vec::with_capacity(MSG_HEADER_LEN);
 
         let mut header_parsed = false;
         let mut full_msg_len = 0;
         loop {
-            match stream.read(&mut buffer) {
-                Ok(n) => match n {
-                    0 => {
-                        eprintln!(
-                            "[{:^12}[{}]]: Connection severed!",
-                            "ConnHandler", &self.context.id
-                        );
-                        return Err(errors::BadRequestError::from(errors::ConnectionSevered {}));
-                    }
-                    _ => {
-                        eprintln!(
-                            "[{:^12}[{}]]: Read {} bytes. Proceeding.",
-                            "ConnHandler", &self.context.id, n
-                        );
-                        raw.extend_from_slice(&buffer[0..n]);
-                    }
-                },
-                Err(err) => {
-                    return Err(errors::BadRequestError::from(errors::ReadError::from(
-                        err.to_string(),
-                    )));
-                }
-            }
+            self.extend_raw_mess(&mut raw, stream)?;
             if raw.len() >= MSG_HEADER_LEN && !header_parsed {
-                eprintln!(
-                    "[{:^12}[{}]]: Read sufficient number of bytes to parse header.",
-                    "ConnHandler", &self.context.id
-                );
-                full_msg_len = Self::parse_header(&raw[..])?;
-                full_msg_len += MSG_HEADER_LEN as u32;
-                eprintln!(
-                    "[{:^12}[{}]]: Full msg is {} bytes. {} more bytes to read",
-                    "ConnHandler",
-                    &self.context.id,
-                    full_msg_len,
-                    full_msg_len as usize - raw.len()
-                );
+                full_msg_len = self.read_header(&mut raw)?;
                 header_parsed = true;
             }
             if raw.len() == full_msg_len as usize && header_parsed {
@@ -210,6 +175,53 @@ impl Handler {
         Ok(raw)
     }
 
+    fn extend_raw_mess(
+        &self,
+        raw: &mut MessageRaw,
+        stream: &mut TcpStream,
+    ) -> Result<(), errors::BadRequestError> {
+        let mut buffer = [0; MSG_BATCH_LEN];
+        match stream.read(&mut buffer) {
+            Ok(n) => match n {
+                0 => {
+                    eprintln!(
+                        "[{:^12}[{}]]: Connection severed!",
+                        "ConnHandler", &self.context.id
+                    );
+                    Err(errors::BadRequestError::from(errors::ConnectionSevered {}))
+                }
+                _ => {
+                    eprintln!(
+                        "[{:^12}[{}]]: Read {} bytes. Proceeding.",
+                        "ConnHandler", &self.context.id, n
+                    );
+                    raw.extend_from_slice(&buffer[0..n]);
+                    Ok(())
+                }
+            },
+            Err(err) => Err(errors::BadRequestError::from(errors::ReadError::from(
+                err.to_string(),
+            ))),
+        }
+    }
+
+    fn read_header(&self, raw: &MessageRaw) -> Result<u32, errors::HeaderValidationError> {
+        eprintln!(
+            "[{:^12}[{}]]: Read sufficient number of bytes to parse header.",
+            "ConnHandler", &self.context.id
+        );
+        let mut full_msg_len = Self::parse_header(&raw[..])?;
+        full_msg_len += MSG_HEADER_LEN as u32;
+        eprintln!(
+            "[{:^12}[{}]]: Full msg is {} bytes. {} more bytes to read",
+            "ConnHandler",
+            &self.context.id,
+            full_msg_len,
+            full_msg_len as usize - raw.len()
+        );
+        Ok(full_msg_len)
+    }
+
     fn parse_header(header: &[u8]) -> Result<u32, errors::HeaderValidationError> {
         for i in 0..MSG_SKEY_FIELD_LEN {
             if SKEY[i] != header[i] {
@@ -220,9 +232,9 @@ impl Handler {
             }
         }
         let beggining = MSG_SKEY_FIELD_LEN + MSG_ID_FIELD_LEN;
-        let mut id_as_bytes: [u8; 4] = [0; 4];
-        id_as_bytes.copy_from_slice(&header[beggining..beggining + MSG_ID_FIELD_LEN]);
-        Ok(u32::from_le_bytes(id_as_bytes))
+        let mut payload_len: [u8; 4] = [0; 4];
+        payload_len.copy_from_slice(&header[beggining..beggining + MSG_LEN_FIELD_LEN]);
+        Ok(u32::from_le_bytes(payload_len))
     }
 
     fn response_as_bytes(resp: Box<dyn Response>) -> Vec<u8> {
