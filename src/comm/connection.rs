@@ -15,6 +15,7 @@ pub const MSG_SKEY_FIELD_LEN: usize = 2;
 pub const MSG_ID_FIELD_LEN: usize = 4;
 pub const MSG_HEADER_LEN: usize = MSG_SKEY_FIELD_LEN + MSG_LEN_FIELD_LEN + MSG_ID_FIELD_LEN;
 
+#[derive(Clone)]
 pub struct Context {
     pub id: usize,
     pub initialized: bool,
@@ -53,6 +54,7 @@ impl Handler {
     // to dispatch from raw?
     // Or some kind of reference to a context struct being passed along?
     pub fn handle_connection(&self, mut stream: TcpStream) {
+        let mut ctx = self.context.clone();
         loop {
             eprintln!(
                 "[{:^12}[{}]]: Trying to build message!",
@@ -64,7 +66,7 @@ impl Handler {
             };
             match self.req_handlers.read() {
                 Ok(guard) => {
-                    match self.handle_request(raw, &(*guard)) {
+                    match self.handle_request(raw, &(*guard), &mut ctx) {
                         Some(resp) => self.write_response(resp, &mut stream),
                         None => return,
                     };
@@ -102,11 +104,7 @@ impl Handler {
         return Some(raw);
     }
 
-    fn handle_request(
-        &self,
-        raw: MessageRaw,
-        req_dispatcher: &handlers::Dispatcher,
-    ) -> Option<Box<dyn Response>> {
+    fn handle_request(&self, raw: MessageRaw, req_dispatcher: &handlers::Dispatcher, ctx: &mut Context) -> Option<Box<dyn Response>> {
         match req_dispatcher.dispatch_from_raw(raw) {
             // todo method to return error response from error
             Err(err) => {
