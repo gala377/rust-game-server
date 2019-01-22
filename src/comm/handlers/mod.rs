@@ -49,7 +49,6 @@ pub trait DefaultBuilder {
 }
 
 impl<T> Builder for T where T: DefaultBuilder {
-    
     fn req_id() -> MessageId {
         <T as DefaultBuilder>::req_id()
     }

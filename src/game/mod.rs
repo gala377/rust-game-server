@@ -43,6 +43,11 @@ impl Game {
 }
 
 impl Game {
+    /// Returns value od the field num_of_players 
+    pub fn get_num_of_players(&self) -> u8 {
+        self.num_of_players
+    }
+
     /// Adds new Unit to the game.
     /// Provides id, default stats and sets state to Idle.
     ///
