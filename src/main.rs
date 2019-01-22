@@ -1,5 +1,3 @@
-extern crate glib;
-
 use std::str::FromStr;
 use std::string::String;
 

@@ -1,8 +1,4 @@
-#![feature(extern_crate_item_prelude)]
-
 extern crate proc_macro;
-extern crate syn;
-extern crate quote;
 
 use proc_macro::TokenStream;
 use quote::quote;

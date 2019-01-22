@@ -1,5 +1,4 @@
 /// Helper functions for operations on files.
-extern crate tempfile;
 
 use std::error::Error;
 use std::fs::File;

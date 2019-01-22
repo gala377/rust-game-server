@@ -1,6 +1,5 @@
 /// Module handles cofiguration files reading.
 /// And the internal config representation.
-extern crate toml;
 
 use std::error::Error;
 use std::fmt;
@@ -62,7 +61,7 @@ impl fmt::Display for ServerConfig {
 mod tests {
 
     use super::*;
-    use helpers::file;
+    use crate::helpers::file;
 
     #[test]
     fn creating_config_empty_file_returns_an_error() {

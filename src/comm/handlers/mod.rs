@@ -39,8 +39,8 @@ pub trait Builder {
 pub trait DefaultBuilder<T: Request, U: Response + 'static> {
     fn req_id() -> MessageId;
 
-    fn req_from_raw(&MessageRaw) -> Result<T, ReadError>;
-    fn handle_request(T) -> Result<U, ReadError>;
+    fn req_from_raw(raw: &MessageRaw) -> Result<T, ReadError>;
+    fn handle_request(req: T) -> Result<U, ReadError>;
 
     fn build_handler() -> BoxedReqHandler {
         Box::new(|raw: MessageRaw| {
