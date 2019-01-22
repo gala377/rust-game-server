@@ -25,8 +25,13 @@ Messages:
 	Desc:		First message to send to init connection
 	Response:	0|1  
 
+________________________________________________________________________________
 
-
+	Mess:		Register player
+	Id:			1
+	Payload:	None
+	Desc:		Asc server to register new player
+	Response:	0|2
 
 Responses:
 
@@ -43,6 +48,12 @@ ________________________________________________________________________________
 	Payload:	None
 	Desc:		Connection established 
 
+________________________________________________________________________________
 
+	Mess:		PlayerRegistered
+	Id:			2
+	Payload:	|	0..15   |
+				|  PlayerID |
+	Desc:		Successfully registered a new playerca 
 
 

@@ -11,3 +11,16 @@ impl Message for Hello {
         Vec::new()
     }
 }
+
+pub struct RegisterPlayer;
+
+impl Message for RegisterPlayer {
+    
+    fn id(&self) -> MessageId {
+        1
+    }
+
+    fn payload(&self) -> Payload {
+        Vec::new()
+    }
+}

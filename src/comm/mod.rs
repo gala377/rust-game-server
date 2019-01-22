@@ -5,6 +5,7 @@ use std::{
 };
 
 use crate::config;
+use crate::agent;
 
 mod connection;
 mod errors;
@@ -45,6 +46,8 @@ impl<T> Response for T where T: Message {}
 pub struct Server {
     listener: TcpListener,
     req_dispatcher: Arc<RwLock<handlers::Dispatcher>>,
+    game_agent: Arc<RwLock<agent::Agent>>,
+
     thread_handles: Vec<thread::JoinHandle<()>>,
 }
 
@@ -52,7 +55,7 @@ impl Server {
     /// Creates new server instance.
     /// Opens file from the provided path.
     /// Then reads server configuration from it.
-    pub fn new(filename: String) -> Server {
+    pub fn new(filename: String, game_agent: agent::Agent) -> Server {
         eprintln!(
             "[{:^15}]: Creating server from file {}.",
             "Initialization", filename
@@ -62,8 +65,8 @@ impl Server {
         eprintln!("[{:^15}]: Created.", "Initialization");
         Server {
             listener,
+            game_agent: Arc::new(RwLock::new(game_agent)),
             req_dispatcher: Arc::new(RwLock::new(handlers::init::new_dispatcher())),
-
             thread_handles: Vec::new(),
         }
     }
@@ -77,7 +80,7 @@ impl Server {
             let stream = stream.unwrap();
             eprintln!("[{:^15}]: New connection established.", "Server");
             let conn_handler = connection::Handler::new(
-                connection::Context::new(conn_count),
+                connection::Context::new(conn_count, self.game_agent.clone()),
                 self.req_dispatcher.clone(),
             );
             self.thread_handles.push(thread::spawn(move || {

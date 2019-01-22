@@ -6,6 +6,7 @@ use std::{
     sync::{Arc, RwLock},
 };
 
+use crate::agent;
 use crate::comm::{errors, handlers, MessageRaw, Response};
 
 pub const SKEY: &[u8; MSG_SKEY_FIELD_LEN] = b"RG";
@@ -19,13 +20,16 @@ pub const MSG_HEADER_LEN: usize = MSG_SKEY_FIELD_LEN + MSG_LEN_FIELD_LEN + MSG_I
 pub struct Context {
     pub id: usize,
     pub initialized: bool,
+
+    pub game_agent: Arc<RwLock<agent::Agent>>,
 }
 
 impl Context {
-    pub fn new(conn_id: usize) -> Context {
+    pub fn new(conn_id: usize, game_agent: Arc<RwLock<agent::Agent>>) -> Context {
         Context {
             id: conn_id,
             initialized: false,
+            game_agent,
         }
     }
 }

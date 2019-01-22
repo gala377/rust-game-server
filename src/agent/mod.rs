@@ -1,22 +1,21 @@
-use std::collections::HashMap;
-
 use rand;
 
 use crate::game::Game;
 
 pub type PlayerID = String;
 
-pub struct Agent<'a> {
-    game_model: &'a mut Game,
+pub struct Agent {
+    game_model: Game,
 
     assigned_players: u8,
+    // todo make it a HashMap maybye? for faster access...?
     player_ids: Vec<String>,
 }
 
-impl Agent<'_> {
+impl Agent {
 
     /// Creates new agent
-    pub fn new(game_model: &mut Game) -> Agent {
+    pub fn new(game_model: Game) -> Agent {
         Agent {
             game_model,
             assigned_players: 0,

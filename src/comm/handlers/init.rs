@@ -21,6 +21,7 @@ pub fn new_dispatcher() -> Dispatcher {
     let mut f = Dispatcher::new();
 
     register!(f, hello);
+    register!(f, register_player);
 
     f
 }
