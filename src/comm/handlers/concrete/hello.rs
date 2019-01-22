@@ -12,7 +12,10 @@ use crate::comm::{
 
 pub struct Handler;
 
-impl DefaultBuilder<requests::Hello, responses::Welcome> for Handler {
+impl DefaultBuilder for Handler {
+    type Request = requests::Hello;
+    type Response = responses::Welcome;
+
     fn req_id() -> MessageId {
         0
     }

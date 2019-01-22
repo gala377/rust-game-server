@@ -25,11 +25,14 @@ pub trait Builder {
 }
 
 // todo Box<Error> ?
-pub trait DefaultBuilder<T: Request, U: Response + 'static> {
+pub trait DefaultBuilder {
+    type Request: Request;
+    type Response: Response + 'static;
+
     fn req_id() -> MessageId;
 
-    fn req_from_raw(raw: &MessageRaw) -> Result<T, ReadError>;
-    fn handle_request(req: T, ctx: &mut connection::Context) -> Result<U, ReadError>;
+    fn req_from_raw(raw: &MessageRaw) -> Result<Self::Request, ReadError>;
+    fn handle_request(req: Self::Request, ctx: &mut connection::Context) -> Result<Self::Response, ReadError>;
 
     fn build_handler() -> BoxedReqHandler {
         Box::new(|raw: MessageRaw, ctx: &mut connection::Context| {
