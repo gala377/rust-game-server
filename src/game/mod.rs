@@ -1,21 +1,25 @@
 // All of this module is considered WIP
 
 pub mod error;
-mod helpers;
 pub mod unit;
+mod helpers;
+mod player;
 
-use std::collections::BinaryHeap;
-use std::collections::HashSet;
+use std::collections::{
+    BinaryHeap,
+    HashSet,
+};
 
-use self::error::GameError;
-use self::helpers::Coords;
-use self::unit::Unit;
+use {
+    error::GameError,
+    helpers::Coords,
+    unit::Unit, 
+    player::Player,
+};
 
 /// Game represents current game state.
 /// See documentation for internal logic.
 pub struct Game {
-    /// Num of players (active and inactive).
-    num_of_players: u8,
     /// Number of units currently in play (active).
     num_of_units: usize,
     /// Boundaries of the game board.
@@ -23,6 +27,8 @@ pub struct Game {
     //todo Rewrite to generiational index. RustConf ECS
     /// Units currently in play (active).
     units: Vec<Unit>,
+    /// Players information
+    players: Vec<Player>,
 }
 
 impl Game {
@@ -34,18 +40,26 @@ impl Game {
         assert!(board_size.0 > 0 && board_size.1 > 0);
         assert!(num_of_players > 1);
         Game {
-            num_of_players,
             num_of_units: 0,
             board_size,
             units: Vec::new(),
+            players: Game::init_players(num_of_players),
         }
+    }
+
+    fn init_players(num_of_players: u8) -> Vec<Player> {
+        let mut players = Vec::with_capacity(num_of_players as usize);
+        for i in 0..num_of_players {
+            players.push(Player::new(i));
+        }
+        players
     }
 }
 
 impl Game {
     /// Returns value od the field num_of_players 
-    pub fn get_num_of_players(&self) -> u8 {
-        self.num_of_players
+    pub fn num_of_players(&self) -> u8 {
+        self.players.len() as u8
     }
 
     /// Adds new Unit to the game.
@@ -60,7 +74,7 @@ impl Game {
         position: (usize, usize),
         category: unit::Category,
     ) -> Result<&'a Unit, GameError> {
-        assert!(owner_id < self.num_of_players);
+        assert!(owner_id < self.num_of_players());
         self.assert_position_in_board(position)?;
         self.units.push(Unit {
             id: self.num_of_units,
@@ -374,11 +388,11 @@ mod tests {
         assert_match!(
         g,
         Game {
-            num_of_players: 4,
             board_size: (10, 10),
             num_of_units: 0,
             ..
         });
+        assert!(g.num_of_players() == 4);
     }
 
     #[test]

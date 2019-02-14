@@ -8,7 +8,7 @@ pub struct Agent {
     game_model: Game,
 
     assigned_players: u8,
-    // todo make it a HashMap maybye? for faster access...?
+    // todo make it a HashMap maybe? for faster access...?
     player_ids: Vec<PlayerID>,
 }
 
@@ -27,7 +27,7 @@ impl Agent {
     // with descriptive error message 
     // todo make it some identifier mapped to id
     pub fn register_player(&mut self) -> Option<PlayerID> {
-        if self.assigned_players == self.game_model.get_num_of_players() {
+        if self.assigned_players == self.game_model.num_of_players() {
             None 
         } else {
             self.assigned_players += 1;
