@@ -17,6 +17,8 @@ pub enum GameError {
     /// Requested move cannot be done due
     /// to units stats.
     MoveOutsideUnitsReach(usize, usize),
+    /// Player cannot place more units
+    AllUnitSlotsUsed,
 }
 
 impl Error for GameError {}

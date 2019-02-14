@@ -2,8 +2,8 @@
 
 pub mod error;
 pub mod unit;
+pub mod player;
 mod helpers;
-mod player;
 
 use std::collections::{
     BinaryHeap,
@@ -76,14 +76,29 @@ impl Game {
     ) -> Result<&'a Unit, GameError> {
         assert!(owner_id < self.num_of_players());
         self.assert_position_in_board(position)?;
-        self.units.push(Unit {
-            id: self.num_of_units,
-            owner_id,
-            position,
-            category,
-            stats: helpers::default_unit_stats(),
-            state: unit::State::Idle,
-        });
+        self.add_unit_to_player(owner_id as usize)?;
+        self.add_unit_to_game(
+            Unit {
+                id: self.num_of_units,
+                owner_id,
+                position,
+                category,
+                stats: helpers::default_unit_stats(),
+                state: unit::State::Idle,
+        })
+    }
+
+    fn add_unit_to_player(&mut self, player_id: usize) -> Result<(), GameError> {
+        if self.players[player_id].available_units == 0 {
+            return Err(GameError::AllUnitSlotsUsed);
+        }
+        self.players[player_id].units.push(self.num_of_units);
+        self.players[player_id].available_units -= 1;
+        Ok(())
+    }
+
+    fn add_unit_to_game<'a>(&'a mut self, unit: Unit) -> Result<&'a Unit, GameError> {
+        self.units.push(unit);
         self.num_of_units += 1;
         match self.units.last() {
             Some(val) => Ok(val),
@@ -163,6 +178,15 @@ impl Game {
             };
         }
         Ok(units)
+    }
+
+    /// Returns reference to given Player 
+    pub fn get_player(&self, player_id: u8) -> Option<&Player> {
+        if player_id >= self.num_of_players() {
+            None
+        } else {
+            Some(&self.players[player_id as usize])
+        }
     }
 
     /// After movement assertions changes unit state
@@ -326,6 +350,8 @@ impl Game {
     }
 }
 
+// todo rewrite and write tests for players
+// like is the unit adding to it properly
 #[cfg(test)]
 mod tests {
 

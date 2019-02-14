@@ -1,11 +1,11 @@
 
 
 pub struct Player {
-    id: u8,
+    pub id: u8,
     /// Number of units that can be placed on board
-    available_units: u32,
+    pub available_units: u32,
     /// Ids of units belonging to a player
-    units: Vec<usize>,
+    pub units: Vec<usize>,
 }
 
 
