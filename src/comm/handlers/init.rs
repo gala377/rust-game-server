@@ -22,6 +22,7 @@ pub fn new_dispatcher() -> Dispatcher {
 
     register!(f, hello);
     register!(f, register_player); 
+    register!(f, add_unit);
 
     f
 }

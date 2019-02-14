@@ -76,6 +76,7 @@ impl Game {
     ) -> Result<&'a Unit, GameError> {
         assert!(owner_id < self.num_of_players());
         self.assert_position_in_board(position)?;
+        // todo assert field is empty
         self.add_unit_to_player(owner_id as usize)?;
         self.add_unit_to_game(
             Unit {

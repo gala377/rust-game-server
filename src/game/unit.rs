@@ -15,7 +15,7 @@ pub struct Unit {
     pub category: Category,
     /// Unit's stats - see Stats.
     pub stats: Stats,
-    /// Unit's curretn state - see State.
+    /// Unit's current state - see State.
     pub state: State,
 }
 
